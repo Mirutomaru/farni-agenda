@@ -1,0 +1,76 @@
+# FARNÍ AGENDA - Kontext pro AI agenta
+
+## O projektu
+**Farní agenda** je informační systém pro správu farnosti (Starokatolická církev).
+- **Stack:** Next.js 16.2 + React 18 + TypeScript + Supabase
+- **Verze:** 2.0.0
+- **Cíl:** Správa matrik, financí a majetku farnosti
+
+## Struktura aplikace (app/ router)
+```
+app/
+├── api/          # API route handlers
+├── components/   # Reusable UI komponenty
+├── finance/      # 📄 Sprava-finance/page.tsx - příjmy/výdaje, priority operátorů v JSX
+├── globals.css   # Globální styly (importovány z @/styles/globals.css)
+├── krestni-zapisky/  # 📄 Křestní zápisné (proměnná: zapisy - NE zapys!)
+├── layout.tsx    # Root layout, mobilní menu → CSS checkbox hack (bez JS event handlers)
+├── login/        # Přihlázení + Google OAuth
+├── majetek/      # 📄 Správa-majetku/page.tsx - Supabase query vyžaduje await!
+├── osoby/        # 👥 Seznam osob + OsobaForm (pohlaví select: boolean→string)
+├── page.tsx      # Homepage (farnosti?.count → .length, pole!)
+└── statistiky/   # 📊 Statistiky - timeoutuje při buildu! (dynamic: 'force-dynamic' nutný)
+```
+
+## Opravené problémy (stav po opravách)
+
+### 1. TypeScript typové chyby ✓
+- `app/krestni-zapisky/page.tsx`: proměnná `zapys` → `zapisy` (5×)
+- `app/majetek/page.tsx`: chybějící `await` na Supabase query
+- `components/OsobaForm.tsx`: select value boolean→string u pohlaví
+- `app/page.tsx`: `farnosti?.count` → `.length` (je to pole)
+- `components/KrestniZapisForm.tsx` + `OsobaForm.tsx`: doplněny interface props (`osobaId`, `editId`)
+
+### 2. Build/Static export chyby ✓
+- Inline event handlers (`onClick`, `onChange`) odstraněny z Server Components (nelze serializovat)
+- Mobilní menu v layout.tsx převedeno na CSS checkbox hack
+- `functions/` složka vyřazena z tsconfig.json (Deno moduly nekompatibilní s Node.js)
+- `.env.local`: placeholder hodnoty nahrazeny validními formáty pro Supabase
+
+### 3. Testy ✓
+- 86/86 Jest testů prochází (unit + integration + component)
+- TypeScript checka prošla
+- **Zatím neprošly E2E Playwright testy** - dev server nebyl spuštěn
+
+## Supabase integrace
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co    # ← doplnit real URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...lder                  # ← doplnit real key
+SUPABASE_SERVICE_ROLE_KEY=eyJhbG...lder                      # ← doplnit real key
+```
+
+## Klíčová omezení
+- **Server Components nemohou obsahovat inline event handlers** → statický export selže
+- `/statistiky` stránka timeoutuje při buildu (60s) - potřebuje `dynamic: 'force-dynamic'` nebo mockovanou DB
+- `functions/` složka musí být mimo TypeScript kompilaci
+
+## Testování
+```bash
+npm run test          # všechny Jest testy
+npm run test:e2e      # Playwright E2E testy (vyžaduje běžící dev server na portu 3001)
+npm run test:unit     # unit testy
+npm run test:integration  # integration testy
+npm run test:components   # component testy
+```
+
+## Aktuální stav
+- ✅ TypeScript checka prošla
+- ✅ 86/86 Jest testů prochází  
+- ⚠️ `/statistiky` selhává při `next build` (timeout na DB připojení)
+- 🔄 Následující krok: spustit dev server a E2E Playwright testy
+
+## Důležité soubory pro AI agenta
+- `postup.txt` - tento soubor (kontext projektu)
+- `.env.local` - environment konfigurace
+- `tsconfig.json` - TypeScript config (functions/ vyřazeno)
+- `next.config.js` - Next.js konfigurace

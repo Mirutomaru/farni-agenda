@@ -42,7 +42,7 @@ export default async function MajetekPage({ searchParams }: { searchParams?: { k
   let totalValue = 0;
   let activeCount = 0;
 
-  const { data: items } = query;
+  const { data: items }: any = await query;
 
   return (
     <div className="space-y-6">

@@ -55,7 +55,7 @@ const zodOsobaForm = z.object({
   biřmování_misto: z.string().optional(),
 });
 
-export default function OsobaForm() {
+export default function OsobaForm({ editId }: { editId?: string }) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [farnosti, setFarnosti] = useState<any[]>([]);
@@ -156,7 +156,7 @@ export default function OsobaForm() {
     setShowSuggestions(false);
   };
 
-  // Odeslání formuláře s paralelním šifrováním
+  // Odeslání formuláře na backend (šifrování probíhá SERVER-SIDE)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -176,18 +176,7 @@ export default function OsobaForm() {
     setLoading(true);
 
     try {
-      // Paralelní šifrování všech polí najednou (místo sequential await)
-      const encryptedResults = await Promise.all([
-        encryptField(formData.ico),
-        encryptField(formData.obcan_prukaz),
-        encryptField(formData.adresa_trvaly_bydlist),
-        encryptField(formData.email),
-        encryptField(formData.telefon)
-      ]);
-
-      // Výsledek Promise.all mapujeme na odpovídající sloupce
-      const [ico_encrypted, obcan_prukaz_encrypted, adresa_encrypted, email_encrypted, telefon_encrypted] = encryptedResults;
-
+      // Frontend NEŠIFRUJE - data jdou čistá na backend
       const osobaData = {
         farnost_id: vybrana_farnost,
         krestni_jmeno: formData.krestni_jmeno,
@@ -199,21 +188,31 @@ export default function OsobaForm() {
         krest_misto: formData.krest_misto || null,
         biřmování_datum: formData.biřmování_datum || null,
         biřmování_misto: formData.biřmování_misto || null,
-        ico_encrypted,
-        obcan_prukaz_encrypted,
-        adresa_trvaly_bydlist_encrypted: adresa_encrypted,
-        email_encrypted,
-        telefon_encrypted,
+        // Citlivá pole - čistá data, backend je zašifruje
+        ico: formData.ico || null,
+        obcan_prukaz: formData.obcan_prukaz || null,
+        adresa_trvaly_bydlist: formData.adresa_trvaly_bydlist || null,
+        email: formData.email || null,
+        telefon: formData.telefon || null,
       };
 
-      const { data, error } = await supabase
-        .from('osoby')
-        .insert([osobaData])
-        .select()
-        .single();
+      const response = await fetch('/api/osoby', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          // Authorization header pro audit log (pokud je user přihlášen)
+          ...(typeof window !== 'undefined' ? {} : {})
+        },
+        body: JSON.stringify(osobaData),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(errorBody.error || `HTTP ${response.status}`);
+      }
 
+      const result = await response.json();
+      
       alert(`Osoba ${formData.krestni_jmeno} ${formData.prijmeni} byla úspěšně přidána!`);
       
       // Reset formuláře
@@ -239,29 +238,6 @@ export default function OsobaForm() {
       alert('Chyba při ukládání osoby. Zkuste to prosím znovu.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Helper pro šifrování (volá /api/encrypt - vrací hex:base64 string)
-  const encryptField = async (value: string): Promise<string | null> => {
-    if (!value) return null;
-
-    try {
-      const response = await fetch('/api/encrypt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value })
-      });
-
-      if (!response.ok) throw new Error('Šifrování selhalo');
-
-      const result = await response.json();
-      
-      // encrypt route vrací { encrypted: "hex_iv:base64_data" } - to Supabase uloží jako TEXT/BYTEA
-      return result.encrypted;
-    } catch (err) {
-      console.error('Chyba při šifrování:', err);
-      throw err;
     }
   };
 
@@ -351,7 +327,7 @@ export default function OsobaForm() {
               <label htmlFor="pohlavi" className="block text-sm mb-1">Pohlaví</label>
               <select
                 id="pohlavi"
-                value={formData.pohlavi ?? ''}
+                value={formData.pohlavi === true ? 'male' : formData.pohlavi === false ? 'female' : ''}
                 onChange={(e) => setFormData({...formData, pohlavi: e.target.value === 'male'})}
                 className="w-full p-2 border rounded"
               >

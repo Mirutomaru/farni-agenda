@@ -71,27 +71,25 @@ beforeAll(() => {
 
 describe('Debug Submit', () => {
   it('should complete form submission successfully', async () => {
-    const { default: OsobaForm } = await import('@/components/OsobaForm');
-    
-    console.log('
-=== RENDERING ===');
+    const { default: OsobaForm } = await import('@/features/osoba-form');
+
+    console.log('=== RENDERING ===');
     await act(async () => { render(<OsobaForm />); });
 
-    console.log('
-=== AFTER RENDER - checking DOM ===');
+    console.log('=== AFTER RENDER - checking DOM ===');
     expect(screen.getByText(/Přidat novou osobu/i)).toBeInTheDocument();
 
     // Select farnost
     const farnostSelect = screen.getByLabelText(/Farnost \*/i);
     fireEvent.change(farnostSelect, { target: { value: '1' } });
-    
+
     console.log('=== AFTER SELECTING FARNOST ===');
     expect(farnostSelect).toHaveValue('1');
 
     // Type name
     const krestniInput = screen.getByLabelText(/Křestní jméno \*/i);
     fireEvent.change(krestniInput, { target: { value: 'Jan' } });
-    
+
     const prijmeniInput = screen.getByLabelText(/Příjmení \*/i);
     fireEvent.change(prijmeniInput, { target: { value: 'Novák' } });
 
@@ -99,7 +97,7 @@ describe('Debug Submit', () => {
 
     // Submit
     const submitButton = screen.getByRole('button', { name: /Přidat osobu/i });
-    
+
     let alertCalled = false;
     window.alert = (...args: any[]) => {
       console.log('ALERT CALLED:', args.join(' '));
@@ -107,7 +105,7 @@ describe('Debug Submit', () => {
     };
 
     fireEvent.click(submitButton);
-    
+
     console.log('=== AFTER CLICK SUBMIT ===');
     console.log('alertCalled immediately:', alertCalled);
 
@@ -117,11 +115,10 @@ describe('Debug Submit', () => {
       expect(alertCalled || true).toBe(true); // will fail if no alert
     }, { timeout: 5000 });
 
-    console.log('
-=== FINAL STATE ===');
+    console.log('=== FINAL STATE ===');
     await new Promise(r => setTimeout(r, 100));
     console.log('alertCalled after wait:', alertCalled);
-    
+
     expect(alertCalled).toBe(true); // This should pass if the component worked
   });
 });

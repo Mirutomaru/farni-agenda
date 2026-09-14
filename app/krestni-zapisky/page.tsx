@@ -3,7 +3,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import KrestniZapisForm from '@/components/KrestniZapisForm';
+import KrestniZapisForm from '@/components/features/krestni-zapis-form';
 
 const ZAPIS_TYPES = [
   { value: 'krest', label: '⛪ Křest', color: 'bg-blue-100 text-blue-800 border-blue-200' },
@@ -60,7 +60,7 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
           <span className="text-3xl">📋</span>
           <div>
             <p className="text-sm text-gray-500 font-medium">Celkem záznamů</p>
-            <p className="text-2xl font-bold text-blue-600">{zapys?.length || 0}</p>
+            <p className="text-2xl font-bold text-blue-600">{zapisy?.length || 0}</p>
           </div>
         </div>
 
@@ -93,7 +93,7 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
       </div>
 
       {/* Filtry */}
-      {zapys && zapisy.length > 0 ? (
+      {zapisy && zapisy.length > 0 ? (
         <div className="card p-4">
           <form action="/krestni-zapisky" method="get" className="flex gap-3 flex-wrap items-center">
             <label className="text-sm font-medium text-gray-700 self-center">Filtrovat podle typu:</label>
@@ -124,7 +124,7 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
       )}
 
       {/* Seznam zápisů */}
-      {!error && zapys && zapisy.length > 0 ? (
+      {!error && zapisy && zapisy.length > 0 ? (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -137,7 +137,7 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {zapys.map((zapis: any) => (
+              {zapisy.map((zapis: any) => (
                 <tr key={zapis.id} className="hover:bg-blue-50 transition-colors">
                   <td className="px-4 py-3">
                     <div>
@@ -195,7 +195,7 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
 
           {/* Celkový součet */}
           <div className="px-4 py-3 border-t bg-gray-50 text-sm text-gray-600">
-            Zobrazeno {zapys.length} z celkem zápisů
+            Zobrazeno {zapisy.length} z celkem zápisů
           </div>
         </div>
       ) : !error ? (
@@ -217,7 +217,7 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
       ) : null}
 
       {/* Form pro přidání nového zápisu */}
-      {zapys && zapisy.length < 50 ? (
+      {zapisy && zapisy.length < 50 ? (
         <section className="card bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             ✝️ Přidat nový křestní zápis

@@ -45,7 +45,7 @@ describe('DEBUG2: Supabase mock test', () => {
 
   test('3. Import OsobaForm a render', async () => {
     // Dynamický import aby se mock aplikoval
-    const { default: OsobaForm } = await import('@/components/OsobaForm');
+    const { default: OsobaForm } = await import('@/features/osoba-form');
     
     console.log('Rendering OsobaForm...');
     render(<OsobaForm />);

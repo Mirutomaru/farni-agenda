@@ -3,8 +3,8 @@
 
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import OsobaForm from '@/components/OsobaForm';
-import KrestniZapisForm from '@/components/KrestniZapisForm';
+import OsobaForm from '@/components/features/osoba-form';
+import KrestniZapisForm from '@/components/features/krestni-zapis-form';
 
 export default async function OsobaDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();

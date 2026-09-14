@@ -2,39 +2,45 @@
 // Jest a Playwright konfigurace
 
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'jsdom',
-  roots: ['<rootDir>/tests'],
+  preset: "ts-jest",
+  testEnvironment: "jsdom",
+  roots: ["<rootDir>/tests"],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { 
-      tsconfig: './tsconfig.test.json',
-      jsx: 'react-jsx'
-    }]
-  },
-  globals: {
-    jest: true
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        tsconfig: "./tsconfig.test.json",
+        jsx: "react-jsx",
+      },
+    ],
   },
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
-    '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.ts'
+    // @/features/X → components/features/X (prioritně)
+    "^@/features/(.*)$": "<rootDir>/components/features/$1",
+    
+    // @/lib/X → lib/X (pro Supabase client atd.)
+    "^@/lib/(.*)$": "<rootDir>/lib/$1",
+    
+    // Zbylé @/X → root projektu
+    "^@/(.*)$": "<rootDir>/$1",
+    
+    // CSS mock
+    "\\.css$": "<rootDir>/tests/__mocks__/styleMock.ts",
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  setupFiles: ['<rootDir>/tests/polyfills.ts'],
-  testMatch: [
-    '**/tests/**/*.test.(ts|tsx)'
-  ],
+  setupFilesAfterEnv: ["<rootDir>/tests/setup.ts"],
+  testMatch: ["**/tests/**/*.test.(ts|tsx)"],
   collectCoverageFrom: [
-    'app/**/*.{ts,tsx}',
-    '!app/api/**',
-    '!app/**/route.ts'
+    "app/**/*.{ts,tsx}",
+    "!app/api/**",
+    "!app/**/route.ts",
   ],
   coverageThreshold: {
     global: {
       branches: 80,
       functions: 80,
       lines: 80,
-      statements: 80
-    }
+      statements: 80,
+    },
   },
   testTimeout: 30000,
 };

@@ -1,7 +1,7 @@
 // FARNÍ AGENDA - GLOBAL LAYOUT (Next.js App Router)
 // Globální rozvržení s navigací, Supabase provider a šablonou
 
-import '@/styles/globals.css';
+import './globals.css';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
@@ -64,17 +64,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 )}
 
                 {/* Mobile menu button */}
-                <button className="md:hidden p-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-blue-50" onClick={() => {
-                  const menu = document.getElementById('mobile-menu');
-                  if (menu) menu.classList.toggle('hidden');
-                }}>
+                <label htmlFor="mobile-menu-toggle" className="md:hidden cursor-pointer p-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-blue-50">
                   ☰
-                </button>
+                  <input id="mobile-menu-toggle" type="checkbox" className="hidden peer" />
+                </label>
               </div>
             </div>
 
-            {/* Mobile navigation */}
-            <div id="mobile-menu" className="md:hidden hidden pb-4 border-t border-gray-100 mt-2 pt-3">
+            {/* Mobile navigation - shown via CSS peer-checked */}
+            <div id="mobile-menu" className="md:hidden hidden peer-checked:block pb-4 border-t border-gray-100 mt-2 pt-3">
               {navItems.map((item) => (
                 <Link
                   key={item.href}

@@ -1,0 +1,444 @@
+MAPA PROJEKTU APLIKACE
+==================================================
+
+📂 farni-agenda/
+    📄 mapa.py
+        def get_python_signature(node):
+            """Získá přesnou definici funkce včetně argumentů a návratových typů (vyžaduje Python 3.9+)."""
+        def parse_python_file(file_path):
+            """Projde Python soubor přes abstraktní syntaktický strom (AST) bez jeho spuštění."""
+        def parse_kotlin_file(file_path):
+            """Základní textová extrakce rozhraní pro Kotlin (Jetpack Compose/Android)."""
+        def parse_typescript_file(file_path):
+            """Extrahuje třídy, funkce, interface a typy z TypeScript souborů."""
+        def generate_map(root_dir):
+
+    📄 next-env.d.ts
+    📄 playwright.config.ts
+    📂 components/
+        📂 ui/
+            📄 mobile-menu-button.tsx
+        📂 features/
+            📄 krestni-zapis-form.tsx
+        interface Osoba
+            const loadOsoby = async () =>
+            const handleSubmit = async (e: React.FormEvent) =>
+
+            📄 osoba-form.tsx
+        interface OsobaFormData
+        interface SmartformResponse
+            const loadFarnosti = async () =>
+            const searchSmartform = async (query: string) =>
+            const handleAddressSelect = (address: any) =>
+            const handleSubmit = async (e: React.FormEvent) =>
+            const encryptField = async (value: string): Promise<string | null> =>
+            const toggleRole = (role: string) =>
+
+            📄 statistiky-dashboard.tsx
+        interface FarnostStat
+            const loadStatistics = async () =>
+            const generateReport = async () =>
+
+    📂 migrations/
+    📂 functions/
+        📂 weekly-backup/
+            📄 index.ts
+            async function chunkedExport(supabase: ReturnType<typeof createClient>, table: string, limit: number = 500): Promise<any[]>
+
+        📂 certificates-generator/
+            📄 index.ts
+            function generateCertificatePDF(data: any, osoba: any, type: string): Uint8Array
+            function formatDate(dateStr: string | null): string
+            async function uploadToGCS(fileName: string, content: Uint8Array): Promise<string>
+
+        📂 shared/
+            📄 gcp-auth.ts
+        📂 birthday-watcher/
+            📄 index.ts
+            async function deriveKey(password: string): Promise<CryptoKey>
+            async function decryptField(encryptedValue: string): Promise<string | null>
+            async function sendEmailViaProvider(to: string, subject: string, html: string)
+
+        📂 monthly-statistics/
+            📄 index.ts
+            async function sendEmail(to: string, subject: string, html: string)
+
+        📂 audit-logger/
+            📄 index.ts
+        interface AuditPayload
+            function validateInput(data: unknown):
+            function computeHash(payload: AuditPayload): string
+            async function sendNotifications(adminEmails: string[], payload: AuditPayload): Promise<void>
+            async function writeAuditLog(payload: AuditPayload): Promise<boolean>
+            async function getAdminEmails(): Promise<string[]>
+
+    📂 app/
+        📄 layout.tsx
+        📄 page.tsx
+        📂 osoby/
+            📄 page.tsx
+            const query = (searchParams?.q as string) || ''; =>
+            const statusFilter = (searchParams?.status as string) || 'all'; =>
+
+            📂 new/
+                📄 page.tsx
+            📂 [id]/
+                📄 page.tsx
+                📂 edit/
+                    📄 page.tsx
+        📂 krestni-zapisky/
+            📄 page.tsx
+            const typeFilter = (searchParams?.typ as string) || ''; =>
+
+        📂 login/
+            📄 page.tsx
+        📂 components/
+        📂 statistiky/
+            📄 page.tsx
+        📂 finance/
+            📄 page.tsx
+            const typFilter = (searchParams?.typ as string) || ''; =>
+            const mesicParam = (searchParams?.mesic as string) || ''; =>
+
+            📂 new/
+                📄 page.tsx
+            async function handleSubmit(event: React.FormEvent<HTMLFormElement>)
+
+        📂 api/
+            📂 auth/
+                📂 signin/
+                    📄 route.ts
+                📂 callback/
+                    📄 route.ts
+                📂 signin-email/
+                    📄 route.ts
+            📂 generate-certificate/
+                📄 route.ts
+            📂 smartform-search/
+                📄 route.ts
+            📂 generate-monthly-report/
+                📄 route.ts
+            📂 encrypt/
+        📂 majetek/
+            📄 page.tsx
+            const kategorieFilter = (searchParams?.kategorie as string) || ''; =>
+
+            📂 new/
+                📄 page.tsx
+            async function handleSubmit(event: React.FormEvent<HTMLFormElement>)
+
+    📂 tests/
+        📄 polyfills.ts
+        📄 setup.ts
+        📂 __mocks__/
+            📄 styleMock.ts
+        📂 backend/
+            📂 unit/
+                📄 edge-functions.test.ts
+            function buildMockSupabase()
+
+            📂 integration/
+                📄 api-routes.test.ts
+            function encryptValue(value: string, encryptionKey: string):
+            function decryptValue(encryptedValue: string, encryptionKey: string): string
+
+        📂 frontend/
+            📄 debug-osoba.test.tsx
+            📄 debug-osoba2.test.tsx
+            📄 debug-qb.test.tsx
+        class QueryBuilder
+
+            📄 debug-submit.test.tsx
+            function makeChainable(data, error)
+
+            📄 debug.test.tsx
+            📂 e2e/
+                📄 farni-agenda.spec.ts
+            📂 components/
+                📄 form-components.test.tsx
+            function createQueryBuilder(table)
+            async function renderOsobaForm()
+            async function renderKrestniZapisForm()
+            async function renderStatistikyDashboard()
+            async function fillRequiredFields(component)
+            function submitForm()
+            function expectAlertContains(substring)
+
+    📂 lib/
+        📄 gcp-auth.ts
+        📂 supabase/
+            📄 client.ts
+            📄 server.ts
+        📂 services/
+            📄 certificate-service.ts
+        type CertificateType = 'krest' | 'birovan';
+        interface CertificatePayload
+            function validateCertificateInput(data: unknown):
+            function getDbTableForType(type: CertificateType): string
+            function createErrorResponse(message: string, status: number): NextResponse
+            async function generateCertificate(payload: CertificatePayload): Promise<NextResponse>
+
+            📄 report-service.ts
+        type ReportTotals =
+        interface FarnostStatRow
+        interface AdminUser
+            function getEmailConfig()
+            function validateReportInput(data: unknown):
+            function formatReportHtml(stats: FarnostStatRow[], rok: number, mesic: number): string
+            async function sendEmail(to: string, subject: string, htmlContent: string): Promise<void>
+            async function getAdminEmails(supabaseUrl: string, serviceKey: string): Promise<string[]>
+            async function generateMonthlyReport(rok: number, mesic: number): Promise<
+
+            📄 smartform-service.ts
+        interface SmartformItem
+            function validateInput(query: string | null, limitParam?: string):
+            function normalizeResults(data: SmartformItem[]): AddressResult[]
+            async function searchAddresses(query: string, limit: number): Promise<NextResponse>
+
+        📂 security/
+            📄 encryption.ts
+            function deriveKey(password: string): Buffer
+
+    📂 .next/
+        📂 static/
+            📂 chunks/
+            📂 sno0WbDvzaGVZxpgsV0V4/
+        📂 server/
+            📂 chunks/
+                📂 ssr/
+            📂 app/
+                📂 _global-error.segments/
+                📂 osoby/
+                    📂 page/
+                    📂 new/
+                        📂 page/
+                    📂 [id]/
+                        📂 page/
+                        📂 edit/
+                            📂 page/
+                    📂 new.segments/
+                        📂 osoby/
+                            📂 new/
+                📂 krestni-zapisky/
+                    📂 page/
+                📂 index.segments/
+                📂 _not-found/
+                    📂 page/
+                📂 login.segments/
+                    📂 login/
+                📂 login/
+                    📂 page/
+                📂 _global-error/
+                    📂 page/
+                📂 statistiky/
+                    📂 page/
+                📂 page/
+                📂 osoby.segments/
+                    📂 osoby/
+                📂 finance/
+                    📂 page/
+                    📂 new/
+                        📂 page/
+                    📂 new.segments/
+                        📂 finance/
+                            📂 new/
+                📂 api/
+                    📂 auth/
+                        📂 signin/
+                            📂 route/
+                        📂 callback/
+                            📂 route/
+                        📂 signin-email/
+                            📂 route/
+                    📂 generate-certificate/
+                        📂 route/
+                    📂 smartform-search/
+                        📂 route/
+                    📂 generate-monthly-report/
+                        📂 route/
+                📂 majetek.segments/
+                    📂 majetek/
+                📂 _not-found.segments/
+                    📂 _not-found/
+                📂 finance.segments/
+                    📂 finance/
+                📂 krestni-zapisky.segments/
+                    📂 krestni-zapisky/
+                📂 majetek/
+                    📂 page/
+                    📂 new/
+                        📂 page/
+                    📂 new.segments/
+                        📂 majetek/
+                            📂 new/
+        📂 dev/
+            📂 static/
+                📂 development/
+            📂 server/
+            📂 cache/
+                📂 turbopack/
+                    📂 ee6e79b1/
+            📂 types/
+                📄 cache-life.d.ts
+                📄 routes.d.ts
+        type AppRoutes = "/" | "/finance" | "/finance/new" | "/krestni-zapisky" | "/login" | "/majetek" | "/majetek/new" | "/osoby" | "/osoby/[id]" | "/osoby/[id]/edit" | "/osoby/new" | "/statistiky"
+        type AppRouteHandlerRoutes = "/api/auth/callback" | "/api/auth/signin" | "/api/auth/signin-email" | "/api/encrypt" | "/api/generate-certificate" | "/api/generate-monthly-report" | "/api/smartform-search"
+        type PageRoutes = never
+        type LayoutRoutes = "/"
+        type RedirectRoutes = never
+        type RewriteRoutes = never
+        type Routes = AppRoutes | PageRoutes | LayoutRoutes | RedirectRoutes | RewriteRoutes | AppRouteHandlerRoutes
+        interface ParamMap
+        interface LayoutSlotMap
+        interface PageProps<AppRoute extends AppRoutes>
+        type LayoutProps<LayoutRoute extends LayoutRoutes> =
+        interface RouteContext<AppRouteHandlerRoute extends AppRouteHandlerRoutes>
+
+                📄 validator.ts
+        type AppPageConfig<Route extends AppRoutes = AppRoutes> =
+        type LayoutConfig<Route extends LayoutRoutes = LayoutRoutes> =
+        type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRoutes> =
+        type __IsExpected<Specific extends AppPageConfig<"/finance/new">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/finance">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/krestni-zapisky">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/login">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/majetek/new">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/majetek">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/osoby/[id]/edit">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/osoby/[id]">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/osoby/new">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/osoby">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/statistiky">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/callback">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/signin-email">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/signin">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/encrypt">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/generate-certificate">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/generate-monthly-report">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/smartform-search">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends LayoutConfig<"/">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+
+            📂 logs/
+        📂 export/
+            📂 _next/
+                📂 sno0WbDvzaGVZxpgsV0V4/
+        📂 cache/
+        📂 diagnostics/
+        📂 types/
+            📄 cache-life.d.ts
+            📄 routes.d.ts
+        type AppRoutes = "/" | "/finance" | "/finance/new" | "/krestni-zapisky" | "/login" | "/majetek" | "/majetek/new" | "/osoby" | "/osoby/[id]" | "/osoby/[id]/edit" | "/osoby/new" | "/statistiky"
+        type AppRouteHandlerRoutes = "/api/auth/callback" | "/api/auth/signin" | "/api/auth/signin-email" | "/api/generate-certificate" | "/api/generate-monthly-report" | "/api/smartform-search"
+        type PageRoutes = never
+        type LayoutRoutes = "/"
+        type RedirectRoutes = never
+        type RewriteRoutes = never
+        type Routes = AppRoutes | PageRoutes | LayoutRoutes | RedirectRoutes | RewriteRoutes | AppRouteHandlerRoutes
+        interface ParamMap
+        interface LayoutSlotMap
+        interface PageProps<AppRoute extends AppRoutes>
+        type LayoutProps<LayoutRoute extends LayoutRoutes> =
+        interface RouteContext<AppRouteHandlerRoute extends AppRouteHandlerRoutes>
+
+            📄 validator.ts
+        type AppPageConfig<Route extends AppRoutes = AppRoutes> =
+        type LayoutConfig<Route extends LayoutRoutes = LayoutRoutes> =
+        type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRoutes> =
+        type __IsExpected<Specific extends AppPageConfig<"/finance/new">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/finance">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/krestni-zapisky">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/login">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/majetek/new">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/majetek">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/osoby/[id]/edit">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/osoby/[id]">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/osoby/new">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/osoby">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends AppPageConfig<"/statistiky">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/callback">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/signin-email">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/signin">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/generate-certificate">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/generate-monthly-report">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends RouteHandlerConfig<"/api/smartform-search">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check
+        type __IsExpected<Specific extends LayoutConfig<"/">> = Specific
+        type __Check = __IsExpected<typeof handler>
+        type __Unused = __Check

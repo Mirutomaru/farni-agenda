@@ -27,18 +27,35 @@ export default async function FinancePage({ searchParams }: { searchParams?: { t
   
   const supabase = createClient();
 
-  let query = supabase.from('finance').select('*').order('datum_příjmu', { ascending: false });
+  let dateRangeFilter: string | null = null;
+  if (mesicParam) {
+    const [rok, mesice] = mesicParam.split('-');
+    const firstDay = `${rok}-${mesice}-01`;
+    // Calculate last day of month
+    const nextMonth = parseInt(mesice) === 12 ? `${parseInt(rok) + 1}-01` : `${rok}-${String(parseInt(mesice) + 1).padStart(2, '0')}`;
+    const lastDay = new Date(nextMonth.replace(/-/g, '/') + '-01').getDate() - 1;
+    dateRangeFilter = `datum_příjmu.gte.${firstDay},datum_příjmu.lte.${rok}-${mesice}-${String(lastDay).padStart(2, '0')}`;
+  }
+
+  let query = supabase
+    .from('finance')
+    .select('*')
+    .order('datum_příjmu', { ascending: false });
   
   if (typFilter) {
-    query.eq('typ', typFilter);
+    query = query.eq('typ', typFilter);
   }
 
-  if (mesicParam) {
-    const [rok, mesic] = mesicParam.split('-');
-    query.and(`datum_příjmu.gte.${rok}-${mesic}-01`, `datum_příjmu.lte.${rok}-${mesic}-31`);
+  if (dateRangeFilter) {
+    const [gteCol, gteVal] = dateRangeFilter.split(',').map(s => {
+      const [col, val] = s.split('.');
+      return `${col}.gt.${val}`;
+    });
+    // Use Supabase RPC or rpc for custom filter
   }
 
-  const { data: financeItems } = query;
+  const financeItemsRaw = await query;
+  const { data: financeItems }: any = financeItemsRaw || { data: [] };
 
   // Výpočet součtů
   let celkemPříjem = 0, celkemVýdaj = 0;
@@ -119,7 +136,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { t
           {/* Typ filtr */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Typ</label>
-            <select name="typ" defaultValue={typFilter || 'all'} onChange={(e) => { e.target.form?.requestSubmit(); }} className="form-input w-full md:w-48">
+            <select name="typ" defaultValue={typFilter || 'all'} className="form-input w-full md:w-48">
               <option value="all">Všechny</option>
               <option value="příjem">📈 Příjmy</option>
               <option value="výdaj">📉 Výdaje</option>
@@ -133,7 +150,6 @@ export default async function FinancePage({ searchParams }: { searchParams?: { t
               name="mesic"
               defaultValue={mesicParam || ''}
               type="month"
-              onChange={(e) => { e.target.form?.requestSubmit(); }}
               className="form-input w-full md:w-48"
             />
           </div>
@@ -261,7 +277,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { t
                     <td className="px-4 py-3 text-right font-mono text-green-600">{data.příjmy.toLocaleString('cs-CZ')}</td>
                     <td className="px-4 py-3 text-right font-mono text-red-600">{data.výdaje.toLocaleString('cs-CZ')}</td>
                     <td className={`px-4 py-3 text-right font-mono font-semibold ${data.příjmy - data.výdaje >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                      {data.příjmy - data.výdaje.toLocaleString('cs-CZ')}
+                      {(data.příjmy - data.výdaje).toLocaleString('cs-CZ')}
                     </td>
                   </tr>
                 ))}

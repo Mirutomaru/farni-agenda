@@ -74,7 +74,7 @@ export default async function DashboardPage() {
                 <span className="text-sm font-medium text-gray-500">Farnosti</span>
                 <span className="text-2xl">⛪</span>
               </div>
-              <p className="text-3xl font-bold text-blue-600">{farnosti?.count || 0}</p>
+              <p className="text-3xl font-bold text-blue-600">{farnosti?.length || 0}</p>
             </div>
 
             {/* Celkové finance */}

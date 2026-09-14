@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import OsobaForm from '@/components/OsobaForm';
+import OsobaForm from '@/components/features/osoba-form';
 
 export default function EditOsobaPage({ params }: { params: { id: string } }) {
   const [saved, setSaved] = useState(false);

@@ -12,7 +12,7 @@ interface Osoba {
   prijmeni: string;
 }
 
-export default function KrestniZapisForm() {
+export default function KrestniZapisForm({ osobaId }: { osobaId?: string }) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [osoby, setOsoby] = useState<Osoba[]>([]);

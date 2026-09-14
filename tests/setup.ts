@@ -32,6 +32,20 @@ global.console = {
   error: jest.fn(),
 };
 
+// ✅ FIX: Mock window.alert — OsobaForm volá alert() při validaci a úspěchu
+if (typeof global.window !== 'undefined') {
+  global.window.alert = jest.fn();
+} else if (typeof global.alert === 'function' && global.alert.toString().indexOf('[native code]') > -1) {
+  // jsdom environment — override native alert with mock
+  (global as any).alert = jest.fn();
+}
+// Pokud alert nebyl nativní funkce, vytvoříme ho jako jest.fn()
+if (typeof (global as any).alert !== 'function') {
+  (global as any).alert = jest.fn();
+}
+
+export const mockAlert = global.alert as jest.MockedFunction<typeof alert>;
+
 // Testovací helper funkce
 export const mockPerson = (overrides = {}) => ({
   id: 'test-person-uuid',

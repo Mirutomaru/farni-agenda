@@ -3,7 +3,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import OsobaForm from '@/components/OsobaForm';
+import OsobaForm from '@/components/features/osoba-form';
 
 export default async function OsobyPage({ searchParams }: { searchParams?: { q: string; status?: string } }) {
   const query = (searchParams?.q as string) || '';
@@ -64,7 +64,7 @@ export default async function OsobyPage({ searchParams }: { searchParams?: { q: 
           </div>
 
           {/* Filtr podle statusu */}
-          <select name="status" defaultValue={statusFilter} onChange={(e) => { e.target.form?.requestSubmit(); }} className="form-input w-full md:w-48">
+          <select name="status" defaultValue={statusFilter} className="form-input w-full md:w-48">
             <option value="all">Všechny</option>
             <option value="aktivni">Aktivní</option>
             <option value="bez_farnosti">Bez farnosti</option>

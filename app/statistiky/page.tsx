@@ -4,6 +4,9 @@
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
+// Data se načítají při requestu (ne při buildu) — placeholder Supabase URL by jinak timeoutovala statický export
+export const dynamic = 'force-dynamic';
+
 export default async function StatistikyPage() {
   const supabase = createClient();
   
@@ -298,8 +301,7 @@ export default async function StatistikyPage() {
       </section>
 
       {/* Statistika svátostí */}
-      {totalKresty > 0 || totalBirovani > 0 || totalSvatby > 0 ? (
-        <section className="card">
+      <section className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             ✝️ Celkové statistiky svátostí
           </h3>
@@ -377,8 +379,7 @@ export default async function StatistikyPage() {
           </svg>
 
           {/* Legend */}
-        </div>
-      ) : null}
+      </section>
 
       {/* Recent activities */}
       <section className="card">
