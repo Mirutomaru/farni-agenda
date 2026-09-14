@@ -171,16 +171,39 @@ describe('saveOsobaService — ukládání + šifrování', () => {
     expect(res.status).toBe(500);
   });
 
-  it('pohlavi jako boolean projde; ne-boolean → null (známé chování)', async () => {
+  it('pohlavi normalizace: boolean i string projdou, neznámé → null', async () => {
+    // Boolean (co posílá formulář) — projde
     await saveOsobaService(makeRequest({ ...VALID_BODY, pohlavi: true }));
     let inserted = lastInsertPayload[0];
     expect(inserted.pohlavi).toBe(true);
 
     jest.clearAllMocks();
     lastInsertPayload = null;
+    // String 'true' (P0 fix — dříve se tichounce proměnil v null)
     await saveOsobaService(makeRequest({ ...VALID_BODY, pohlavi: 'true' as unknown }));
     inserted = lastInsertPayload[0];
-    expect(inserted.pohlavi).toBeNull(); // string se nezachová (P0 bug)
+    expect(inserted.pohlavi).toBe(true);
+
+    jest.clearAllMocks();
+    lastInsertPayload = null;
+    // String 'male' (hodnota z <select>) — normalizuje na true
+    await saveOsobaService(makeRequest({ ...VALID_BODY, pohlavi: 'male' as unknown }));
+    inserted = lastInsertPayload[0];
+    expect(inserted.pohlavi).toBe(true);
+
+    jest.clearAllMocks();
+    lastInsertPayload = null;
+    // Neznámý string → null (nezvoleno)
+    await saveOsobaService(makeRequest({ ...VALID_BODY, pohlavi: 'xyz' as unknown }));
+    inserted = lastInsertPayload[0];
+    expect(inserted.pohlavi).toBeNull();
+
+    jest.clearAllMocks();
+    lastInsertPayload = null;
+    // Chybějící → null
+    await saveOsobaService(makeRequest(VALID_BODY));
+    inserted = lastInsertPayload[0];
+    expect(inserted.pohlavi).toBeNull();
   });
 });
 

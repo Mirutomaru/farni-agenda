@@ -44,6 +44,19 @@ interface OsobaRozsirena extends OsobaVstup {
 
 // === VALIDACE VSTUPŮ ===
 
+/**
+ * Normalizace pohlaví na boolean | null.
+ * true/'true'/'male' → true (muž), false/'false'/'female' → false (žena),
+ * cokoliv jiného (undefined, null, '', neznámý string) → null (nezvoleno).
+ * Řeší P0 bug: stará validace přijala jen boolean true/false a jakýkoli
+ * string tichounce proměnila v null → pohlaví se ztrácelo.
+ */
+function normalizePohlavi(value: unknown): boolean | null {
+  if (value === true || value === 'true' || value === 'male') return true;
+  if (value === false || value === 'false' || value === 'female') return false;
+  return null;
+}
+
 function validateOsoba(data: unknown): { valid: boolean; payload?: OsobaVstup; error?: string } {
   if (!data || typeof data !== 'object') {
     return { valid: false, error: 'Neplatný vstupní formát' };
@@ -68,7 +81,7 @@ function validateOsoba(data: unknown): { valid: boolean; payload?: OsobaVstup; e
     krestni_jmeno: String(body.krestni_jmeno),
     prijmeni: String(body.prijmeni),
     datum_narozeni: String(body.datum_narozeni),
-    pohlavi: (body.pohlavi === true || body.pohlavi === false) ? body.pohlavi : null,
+    pohlavi: normalizePohlavi(body.pohlavi),
     role_cirkinni: Array.isArray(body.role_cirkinni) ? body.role_cirkinni as string[] : [],
     krest_datum: (typeof body.krest_datum === 'string' && body.krest_datum) ? body.krest_datum : null,
     krest_misto: (typeof body.krest_misto === 'string' && body.krest_misto) ? body.krest_misto : null,
@@ -227,8 +240,13 @@ export async function saveOsobaService(request: NextRequest): Promise<NextRespon
       .single();
 
     if (error) {
+      // P0 fix: starý kód logoval payload.farnost_id pod jménem "osobaId"
+      // (ID farnosti ≠ ID osoby). V error větvi data.id ještě neexistuje,
+      // takže logujeme identifikátory, které skutečně máme.
       log.error('Vložení osoby selhalo', { 
-        osobaId: payload.farnost_id, 
+        krestniJmeno: payload.krestni_jmeno,
+        prijmeni: payload.prijmeni,
+        farnostId: payload.farnost_id ?? null,
         error: error.message 
       });
       
