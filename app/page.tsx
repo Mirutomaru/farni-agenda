@@ -185,8 +185,8 @@ export default async function DashboardPage() {
             <p className="text-sm text-gray-500 mb-3">Přehled křtů, birování a svateb s grafickým zobrazením</p>
             {statsData && statsData.length > 0 ? (
               <div className="flex gap-2 flex-wrap">
-                <span className="badge badge-active">Křty: {statsData.reduce((s, st) => s + (st.kresty || 0), 0)}</span>
-                <span className="badge badge-warning">Birování: {statsData.reduce((s, st) => s + (st.birovani || 0), 0)}</span>
+                <span className="badge badge-active">Křty: {statsData.reduce((s: number, st: any) => s + (st.kresty || 0), 0)}</span>
+                <span className="badge badge-warning">Birování: {statsData.reduce((s: number, st: any) => s + (st.birovani || 0), 0)}</span>
               </div>
             ) : null}
           </Link>

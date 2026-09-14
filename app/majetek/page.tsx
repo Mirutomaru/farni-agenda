@@ -74,7 +74,7 @@ export default async function MajetekPage({ searchParams }: { searchParams?: Pro
             <div>
               <p className="text-sm text-gray-500">Celková hodnota</p>
               <p className="text-2xl font-bold text-green-600">
-                {items.reduce((sum, item) => sum + (parseFloat(String(item.aktuální_hodnota || item.počiáteční_hodnota)) || 0), 0).toLocaleString('cs-CZ')} Kč
+                {items.reduce((sum: number, item: any) => sum + (parseFloat(String(item.aktuální_hodnota || item.počiáteční_hodnota)) || 0), 0).toLocaleString('cs-CZ')} Kč
               </p>
             </div>
           </div>
