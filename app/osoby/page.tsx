@@ -5,9 +5,11 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import OsobaForm from '@/components/features/osoba-form';
 
-export default async function OsobyPage({ searchParams }: { searchParams?: { q: string; status?: string } }) {
-  const query = (searchParams?.q as string) || '';
-  const statusFilter = (searchParams?.status as string) || 'all';
+export default async function OsobyPage({ searchParams }: { searchParams?: Promise<{ q?: string; status?: string }> }) {
+  // Next.js 15+: searchParams je Promise — bez await se filtry nikdy nečetly a stránka zůstala statická
+  const params = (await searchParams) || {};
+  const query = params.q || '';
+  const statusFilter = params.status || 'all';
   
   const supabase = createClient();
 

@@ -21,9 +21,11 @@ const KATEGORIE_FINANCE: Record<string, string> = {
   jiný_výdaj: '📤 Jiný výdaj'
 };
 
-export default async function FinancePage({ searchParams }: { searchParams?: { typ: string; mesic: string } }) {
-  const typFilter = (searchParams?.typ as string) || '';
-  const mesicParam = (searchParams?.mesic as string) || '';
+export default async function FinancePage({ searchParams }: { searchParams?: Promise<{ typ?: string; mesic?: string }> }) {
+  // Next.js 15+: searchParams je Promise — bez await se filtry nikdy nečetly a stránka zůstala statická
+  const params = (await searchParams) || {};
+  const typFilter = params.typ || '';
+  const mesicParam = params.mesic || '';
   
   const supabase = createClient();
 

@@ -3,6 +3,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { monthRange } from '@/lib/services/svatosti-service';
 
 // Data se načítají při requestu (ne při buildu) — placeholder Supabase URL by jinak timeoutovala statický export
 export const dynamic = 'force-dynamic';
@@ -10,54 +11,52 @@ export const dynamic = 'force-dynamic';
 export default async function StatistikyPage() {
   const supabase = createClient();
   
-  // Získat statistiky za posledních 12 měsíců
+  // Statistika členství + svátosti — vše načítáme paralelně (oprava: dříve 12 sériových query)
   const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth();
-  
-  // Statistika členství podle roku (poslední roky)
-  const { data: clenuStats } = await supabase
-    .from('osoby')
-    .select('*')
-    .order('datum_narozeni', { ascending: false });
-  
-  // Statistiky svátostí za posledních 6 měsíců
-  const sacreData: any[] = [];
-  for (let i = 0; i < 6; i++) {
-    const month = currentMonth - i < 0 ? currentMonth - i + 12 : currentMonth - i;
-    const year = currentMonth - i < 0 ? currentYear - 1 : currentYear;
-    
-    // Křty za měsíc
-    const { data: krestyData } = await supabase
-      .from('krestni_zapisky')
-      .select('*')
-      .gte('datum_krestu', `${year}-${String(month).padStart(2, '0')}-01`)
-      .lt('datum_krestu', `${year}-${String(month).padStart(2, '0')}-31`);
-    
-    // Birování za měsíc  
-    const { data: birovaniData } = await supabase
-      .from('krestni_zapisky')
-      .select('*')
-      .gte('datum_birovani', `${year}-${String(month).padStart(2, '0')}-01`)
-      .lt('datum_birovani', `${year}-${String(month).padStart(2, '0')}-31`);
+  const currentMonth0 = new Date().getMonth(); // 0-based
 
-    sacreData.push({
-      mesic: new Date(year, month - 1).toLocaleDateString('cs-CZ', { month: 'long' }),
-      kresty: krestyData?.length || 0,
-      birovani: birovaniData?.length || 0,
-    });
-  }
+  // Posledních 6 měsíců v chronologickém pořadí (nejstarší → aktuální)
+  const months = Array.from({ length: 6 }, (_, idx) => {
+    const d = new Date(Date.UTC(currentYear, currentMonth0 - (5 - idx), 1));
+    return { year: d.getUTCFullYear(), month0: d.getUTCMonth() };
+  });
 
-  // Obrátit pořadí pro chronologické zobrazení
-  sacreData.reverse();
+  // Celkové počty svátostí — z tabulek svátostí (oprava: osoby nemá sloupce svatost_*)
+  const [clenuRes, krestyTotalRes, birovaniTotalRes, svatbyTotalRes, ...sacreResults] = await Promise.all([
+    supabase.from('osoby').select('*').order('datum_narozeni', { ascending: false }),
+    supabase.from('krestni_zapis').select('id', { count: 'exact', head: true }),
+    supabase.from('birovani_zapis').select('id', { count: 'exact', head: true }),
+    supabase.from('svatby').select('id', { count: 'exact', head: true }),
+    ...months.flatMap(({ year, month0 }) => {
+      const range = monthRange(year, month0);
+      return [
+        // Oprava: tabulky krestni_zapis/birovani_zapis (ne "krestni_zapisky") a správné sloupce;
+        // horní hranice = 1. den následujícího měsíce (dříve "-31" → v únoru invalidní datum)
+        supabase.from('krestni_zapis').select('id', { count: 'exact', head: true })
+          .gte('datum_krstu', range.from).lt('datum_krstu', range.toExclusive),
+        supabase.from('birovani_zapis').select('id', { count: 'exact', head: true })
+          .gte('datum_birovani', range.from).lt('datum_birovani', range.toExclusive),
+      ];
+    }),
+  ]);
 
-  // Celkové statistiky
-  const totalKresty = clenuStats?.filter((p: any) => p.svatost_krst).length || 0;
-  const totalBirovani = clenuStats?.filter((p: any) => p.svatost_birovani).length || 0;
-  const totalSvatby = clenuStats?.filter((p: any) => p.svatost_svadba).length || 0;
+  const clenuStats = clenuRes.data || [];
+
+  // Statistiky svátostí za posledních 6 měsíců (chronologicky)
+  const sacreData: { mesic: string; kresty: number; birovani: number }[] = months.map((m, i) => ({
+    mesic: new Date(Date.UTC(m.year, m.month0)).toLocaleDateString('cs-CZ', { month: 'long' }),
+    kresty: sacreResults[i * 2]?.count ?? 0,
+    birovani: sacreResults[i * 2 + 1]?.count ?? 0,
+  }));
+
+  // Celkové statistiky svátostí
+  const totalKresty = krestyTotalRes.count ?? 0;
+  const totalBirovani = birovaniTotalRes.count ?? 0;
+  const totalSvatby = svatbyTotalRes.count ?? 0;
 
   // Rozdělení podle statusu
-  const activeCount = clenuStats?.filter((p: any) => p.clenstvi_status === 'aktivni').length || 0;
-  const inactiveCount = clenuStats?.filter((p: any) => p.clenstvi_status !== 'aktivni' && p.clenstvi_status !== 'bez_farnosti').length || 0;
+  const activeCount = clenuStats.filter((p: any) => p.clenstvi_status === 'aktivni').length || 0;
+  const inactiveCount = clenuStats.filter((p: any) => p.clenstvi_status !== 'aktivni' && p.clenstvi_status !== 'bez_farnosti').length || 0;
 
   return (
     <div className="space-y-6">

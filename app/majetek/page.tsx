@@ -18,8 +18,9 @@ const KATEGORIE_COLORS: Record<string, string> = {
   finance: 'bg-yellow-100 text-yellow-800 border-yellow-200'
 };
 
-export default async function MajetekPage({ searchParams }: { searchParams?: { kategorie: string } }) {
-  const kategorieFilter = (searchParams?.kategorie as string) || '';
+export default async function MajetekPage({ searchParams }: { searchParams?: Promise<{ kategorie?: string }> }) {
+  // Next.js 15+: searchParams je Promise — bez await se filtr nikdy nečetl a stránka zůstala statická
+  const kategorieFilter = ((await searchParams) || {}).kategorie || '';
   
   const supabase = createClient();
 

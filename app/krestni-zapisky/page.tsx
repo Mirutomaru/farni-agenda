@@ -4,6 +4,7 @@
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import KrestniZapisForm from '@/components/features/krestni-zapis-form';
+import { mergeSvatosti, filterByTyp, certificateTypeFor } from '@/lib/services/svatosti-service';
 
 const ZAPIS_TYPES = [
   { value: 'krest', label: '⛪ Křest', color: 'bg-blue-100 text-blue-800 border-blue-200' },
@@ -11,32 +12,55 @@ const ZAPIS_TYPES = [
   { value: 'svadba', label: '💒 Svadba', color: 'bg-purple-100 text-purple-800 border-purple-200' },
 ];
 
-export default async function KrestniZapiskyPage({ searchParams }: { searchParams?: { typ: string } }) {
-  const typeFilter = (searchParams?.typ as string) || '';
+export default async function KrestniZapiskyPage({ searchParams }: { searchParams?: Promise<{ typ?: string }> }) {
+  // Next.js 15+: searchParams je Promise — bez await se filtr nikdy nečetl a stránka zůstala statická
+  const typeFilter = (await searchParams)?.typ || '';
   
   const supabase = createClient();
 
-  // Získání zápisů s filtrací
-  let query = supabase.from('krestni_zapisky').select('*');
-  
-  if (typeFilter) {
-    query.eq('typ', typeFilter);
-  }
+  // Schéma nemá společnou tabulku ani sloupec "typ" — načteme všechny tři tabulky paralelně
+  const [krestyRes, birovaniRes, svatbyRes, osobyRes, farnostiRes] = await Promise.all([
+    supabase.from('krestni_zapis').select('*'),
+    supabase.from('birovani_zapis').select('*'),
+    supabase.from('svatby').select('*'),
+    supabase.from('osoby').select('id, krestni_jmeno, prijmeni, farnost_id'),
+    supabase.from('farnosti').select('id, nazev'),
+  ]);
 
-  query.order('datum_zaznamu', { ascending: false }).limit(50);
+  const error = krestyRes.error || birovaniRes.error || svatbyRes.error;
 
-  const { data: zapisy, error } = await query;
-
-  // Statistiky pro dashboard
-  let celkemKresty = 0, celkemBirovani = 0, celkemSvatby = 0;
-  
-  if (!error && zapisy) {
-    for (const zapis of zapisy) {
-      if (zapis.typ === 'krest') celkemKresty++;
-      else if (zapis.typ === 'birovani') celkemBirovani++;
-      else if (zapis.typ === 'svadba') celkemSvatby++;
+  // Lookup jména osob a názvů farností pro zobrazení v tabulce
+  const osobaNames = new Map<string, string>();
+  const osobaFarnostId = new Map<string, string | null>();
+  if (!osobyRes.error && osobyRes.data) {
+    for (const o of osobyRes.data as any[]) {
+      osobaNames.set(o.id, `${o.krestni_jmeno} ${o.prijmeni}`);
+      osobaFarnostId.set(o.id, o.farnost_id ?? null);
     }
   }
+  const farnostNazvy = new Map<string, string>();
+  if (!farnostiRes.error && farnostiRes.data) {
+    for (const f of farnostiRes.data as any[]) {
+      farnostNazvy.set(f.id, f.nazev);
+    }
+  }
+
+  // Sloučení + řazení sestupně podle data (oprava: starý kód queryoval neexistující tabulku "krestni_zapisky")
+  const merged = mergeSvatosti(krestyRes.data, birovaniRes.data, svatbyRes.data, 50);
+  const zapisy = filterByTyp(merged, typeFilter);
+
+  // Statistiky dashboardu — počítají z celého datasetu (oprava: dříve jen z prvních 50 řádků)
+  const celkemKresty = krestyRes.error ? 0 : (krestyRes.data || []).length;
+  const celkemBirovani = birovaniRes.error ? 0 : (birovaniRes.data || []).length;
+  const celkemSvatby = svatbyRes.error ? 0 : (svatbyRes.data || []).length;
+
+  // Pomocné funkce pro zobrazení
+  const displayName = (id?: string | null) => (id ? osobaNames.get(id) ?? 'Neznámá osoba' : '—');
+  const farnostName = (osobaId?: string | null) => {
+    if (!osobaId) return '—';
+    const fid = osobaFarnostId.get(osobaId);
+    return fid ? farnostNazvy.get(fid) ?? '—' : '—';
+  };
 
   return (
     <div className="space-y-6">
@@ -137,27 +161,30 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {zapisy.map((zapis: any) => (
+              {zapisy.map((zapis) => (
                 <tr key={zapis.id} className="hover:bg-blue-50 transition-colors">
                   <td className="px-4 py-3">
                     <div>
-                      {/* Osoba name - lookup from osoby table */}
-                      <span className="font-medium text-gray-900">{zapis.osoba_id || 'Neznámá osoba'}</span>
+                      {/* Osoba — jméno z lookupu osoby (oprava: dříve se zobrazovalo UUID) */}
+                      <span className="font-medium text-gray-900">{displayName(zapis.osobaId)}</span>
+                      {zapis.druhOsobaId ? (
+                        <div className="text-xs text-gray-500">+ {displayName(zapis.druhOsobaId)}</div>
+                      ) : null}
                     </div>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3">
-                    {/* Typ badge */}
+                    {/* Typ badge — typ je odvozen z tabulky, ne ze sloupce */}
                     <span className={`badge border ${ZAPIS_TYPES.find(t => t.value === zapis.typ)?.color || 'bg-gray-100 border-gray-200'}`}>
                       {ZAPIS_TYPES.find(t => t.value === zapis.typ)?.label || zapis.typ}
                     </span>
                   </td>
                   <td className="hidden md:table-cell px-4 py-3 text-gray-600">
-                    {/* Datum zápisu */}
-                    {zapis.datum_zaznamu ? new Date(zapis.datum_zaznamu).toLocaleDateString('cs-CZ') : '—'}
+                    {/* Datum svátosti */}
+                    {zapis.datum ? new Date(zapis.datum).toLocaleDateString('cs-CZ') : '—'}
                   </td>
                   <td className="hidden lg:table-cell px-4 py-3 text-gray-600">
-                    {/* Farnost - from farnosti table */}
-                    {zapis.farnost_id || '—'}
+                    {/* Farnost osoby — z lookupu farností */}
+                    {farnostName(zapis.osobaId)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {/* Detail button */}
@@ -166,27 +193,31 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
                     {/* Edit button */}
                     <Link href={`/krestni-zapisky/${zapis.id}/edit`} className="text-gray-500 hover:text-gray-700 mr-2">✏️</Link>
                     
-                    {/* Generate certificate */}
-                    <button 
-                      onClick={async () => {
-                        const response = await fetch('/api/generate-certificate', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ zapisId: zapis.id })
-                        });
-                        if (response.ok) {
-                          const blob = await response.blob();
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `krestni-zapis-${zapis.id}.pdf`;
-                          a.click();
-                        }
-                      }}
-                      className="text-green-600 hover:text-green-700"
-                    >
-                      📄 Certifikát
-                    </button>
+                    {/* Generate certificate — kontrakt service: personId + type ('krest'|'birovan') */}
+                    {certificateTypeFor(zapis.typ) ? (
+                      <button 
+                        onClick={async () => {
+                          const certType = certificateTypeFor(zapis.typ);
+                          if (!certType || !zapis.osobaId) return;
+                          const response = await fetch('/api/generate-certificate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ personId: zapis.id, type: certType })
+                          });
+                          if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `krestni-zapis-${zapis.id}.pdf`;
+                            a.click();
+                          }
+                        }}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        📄 Certifikát
+                      </button>
+                    ) : null}
                   </td>
                 </tr>
               ))}
@@ -195,7 +226,7 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
 
           {/* Celkový součet */}
           <div className="px-4 py-3 border-t bg-gray-50 text-sm text-gray-600">
-            Zobrazeno {zapisy.length} z celkem zápisů
+            Zobrazeno {zapisy.length} z celkem {celkemKresty + celkemBirovani + celkemSvatby} svátostí
           </div>
         </div>
       ) : !error ? (
