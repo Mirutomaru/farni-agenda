@@ -11,7 +11,8 @@ export default async function LoginPage() {
   const { data: { user }, error } = await supabase.auth.getUser();
   
   if (user) {
-    redirect('/dashboard');
+    // Přehledová stránka je v / (app/page.tsx), ne /dashboard
+    redirect('/');
   }
 
   return (
@@ -23,7 +24,7 @@ export default async function LoginPage() {
         </div>
 
         {/* Google Sign-In Button */}
-        <form action="/api/auth/signin" method="post" className="mb-6">
+        <form action="/api/auth/signin" method="get" className="mb-6">
           <button
             type="submit"
             className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"

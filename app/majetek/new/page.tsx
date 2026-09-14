@@ -5,6 +5,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { logger } from '@/lib/logging/logger';
+
+const log = logger('MAJETEK_FORM');
 
 export default function NewMajetekPage() {
   const [saved, setSaved] = useState(false);
@@ -28,7 +31,7 @@ export default function NewMajetekPage() {
         alert('Chyba při ukládání majetku');
       }
     } catch (error) {
-      console.error('Error:', error);
+      log.error('Chyba při ukládání majetku', {}, error instanceof Error ? error : null);
       alert('Došlo k chybě při připojení na server');
     }
   }

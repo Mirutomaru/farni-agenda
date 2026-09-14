@@ -6,6 +6,10 @@
  *   const result = await retryWithBackoff(async () => fetchApi(), { maxAttempts: 3 });
  */
 
+import { logger } from '@/lib/logging/logger';
+
+const log = logger('RETRY');
+
 export interface RetryOptions {
   maxAttempts?: number;      // Default: 3
   baseDelayMs?: number;       // Default: 1000
@@ -66,8 +70,9 @@ export async function retryWithBackoff<T>(
       }
       
       const delay = calculateDelay(attempt, opts);
-      console.warn(`[RETRY] Attempt ${attempt + 1}/${opts.maxAttempts} failed:`, 
-                   lastError.message, `— retrying in ${delay}ms`);
+      log.warn(`Attempt ${attempt + 1}/${opts.maxAttempts} failed — retrying in ${delay}ms`, {
+        error: lastError.message,
+      });
       
       if (attempt < opts.maxAttempts - 1) {
         await sleep(delay);

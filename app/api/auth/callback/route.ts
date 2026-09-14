@@ -3,8 +3,10 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { loggerFromRequest } from '@/lib/logging/logger';
 
 export async function GET(request: Request) {
+  const log = loggerFromRequest(request, 'AUTH');
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   
@@ -18,10 +20,11 @@ export async function GET(request: Request) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    console.error('Auth callback error:', error);
+    log.error('Auth callback error', {}, error);
     redirect('/login?error=auth_failed');
   }
 
   // Redirect to dashboard after successful authentication
-  redirect('/dashboard');
+  // Přehledová stránka je v / (app/page.tsx), ne /dashboard
+  redirect('/');
 }

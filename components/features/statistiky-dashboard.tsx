@@ -5,6 +5,9 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/logging/logger';
+
+const log = logger('STATISTIKY');
 
 interface FarnostStat {
   farnost_id: string;
@@ -61,7 +64,7 @@ export default function StatistikyDashboard() {
 
       setTotals(total);
     } catch (err) {
-      console.error('Chyba při načítání statistik:', err);
+      log.error('Chyba při načítání statistik', {}, err instanceof Error ? err : null);
     } finally {
       setLoading(false);
     }
@@ -85,7 +88,7 @@ export default function StatistikyDashboard() {
       alert(`Report byl odeslán na e-mail biskupa a synodní rady`);
       
     } catch (err) {
-      console.error('Chyba při generování reportu:', err);
+      log.error('Chyba při generování reportu', {}, err instanceof Error ? err : null);
       alert('Chyba při odesílání reportu');
     }
   };

@@ -3,6 +3,9 @@
 // VSTUP: čistý text → výstup: šifrovaný string (hex_iv:base64_encrypted)
 
 import crypto from 'crypto';
+import { logger } from '@/lib/logging/logger';
+
+const log = logger('ENCRYPTION');
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 const SALT = 'farni-agenda-salt';
@@ -68,7 +71,7 @@ export function decrypt(value: string): string {
   } catch (error) {
     // Logování bez odhalení citlivých dat
     const msg = error instanceof Error ? error.message : 'Neznámá chyba při dešifrování';
-    console.error('[ENCRYPTION] Dešifrování selhalo:', msg);
+    log.error('Dešifrování selhalo', { reason: msg });
     throw new Error('Dešifrování selhalo');
   }
 }

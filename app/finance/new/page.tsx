@@ -5,6 +5,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { logger } from '@/lib/logging/logger';
+
+const log = logger('FINANCE_FORM');
 
 const KATEGORIE_FINANCE = [
   // Příjmy
@@ -49,7 +52,7 @@ export default function NewFinancePage() {
         alert('Chyba při ukládání finančního záznamu');
       }
     } catch (error) {
-      console.error('Error:', error);
+      log.error('Chyba při ukládání finančního záznamu', {}, error instanceof Error ? error : null);
       alert('Došlo k chybě při připojení na server');
     }
   }

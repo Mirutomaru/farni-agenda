@@ -6,6 +6,9 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { z } from 'zod';
+import { logger } from '@/lib/logging/logger';
+
+const log = logger('OSOBA_FORM');
 
 interface OsobaFormData {
   krestni_jmeno: string;
@@ -96,7 +99,7 @@ export default function OsobaForm({ editId }: { editId?: string }) {
       if (error) throw error;
       setFarnosti(data || []);
     } catch (err) {
-      console.error('Chyba při načítání farností:', err);
+      log.error('Chyba při načítání farností', {}, err instanceof Error ? err : null);
     }
   };
 
@@ -128,7 +131,7 @@ export default function OsobaForm({ editId }: { editId?: string }) {
         setSuggestions([]);
       }
     } catch (err) {
-      console.error('Chyba při vyhledávání adresy:', err);
+      log.error('Chyba při vyhledávání adresy', {}, err instanceof Error ? err : null);
       setSuggestions([]);
     } finally {
       setLoadingSuggestions(false);
@@ -234,7 +237,7 @@ export default function OsobaForm({ editId }: { editId?: string }) {
       });
 
     } catch (err) {
-      console.error('Chyba při přidávání osoby:', err);
+      log.error('Chyba při přidávání osoby', {}, err instanceof Error ? err : null);
       alert('Chyba při ukládání osoby. Zkuste to prosím znovu.');
     } finally {
       setLoading(false);

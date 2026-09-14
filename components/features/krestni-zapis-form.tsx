@@ -5,6 +5,9 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/logging/logger';
+
+const log = logger('KRESTNI_FORM');
 
 interface Osoba {
   id: string;
@@ -43,7 +46,7 @@ export default function KrestniZapisForm({ osobaId }: { osobaId?: string }) {
       if (error) throw error;
       setOsoby(data || []);
     } catch (err) {
-      console.error('Chyba při načítání osob:', err);
+      log.error('Chyba při načítání osob', {}, err instanceof Error ? err : null);
     }
   };
 
@@ -79,7 +82,7 @@ export default function KrestniZapisForm({ osobaId }: { osobaId?: string }) {
       }
 
     } catch (err) {
-      console.error('Chyba při ukládání křestního zápisu:', err);
+      log.error('Chyba při ukládání křestního zápisu', {}, err instanceof Error ? err : null);
       alert('Chyba při ukládání. Zkuste to prosím znovu.');
     } finally {
       setLoading(false);

@@ -34,5 +34,6 @@ export async function POST(request: Request) {
   }
 
   // Redirect to dashboard after successful sign-in
-  redirect('/dashboard');
+  // Přehledová stránka je v / (app/page.tsx), ne /dashboard
+  redirect('/');
 }

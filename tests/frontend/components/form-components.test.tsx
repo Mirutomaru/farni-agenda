@@ -133,9 +133,6 @@ jest.mock('@/lib/supabase/client', () => ({
 const originalFetch = global.fetch;
 beforeEach(() => {
   global.fetch = jest.fn((url) => {
-    if (typeof url === 'string' && url.includes('/api/encrypt')) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ encrypted: 'enc_test_value' }) });
-    }
     if (typeof url === 'string' && url.includes('smartform-search')) {
       return Promise.resolve({ 
         ok: true, 
