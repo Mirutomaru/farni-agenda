@@ -155,7 +155,7 @@ export function createLogger(serviceName: string, correlationId?: string): Logge
 }
 
 /** Alias matching Python's LogManager pattern (per-module singleton). */
-let _moduleLoggers = new Map<string, Logger>();
+const _moduleLoggers = new Map<string, Logger>();
 
 export function logger(moduleName: string): Logger {
   if (!_moduleLoggers.has(moduleName)) {

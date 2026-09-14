@@ -300,13 +300,13 @@ export default function NewFinancePage() {
           <ol className="space-y-1.5 text-sm text-gray-600 list-none">
             {selectedType === 'příjem' ? (
               <>
-                <li><span className="font-medium">Typ:</span> Vyberte "Příjem" pro dar, sbírku nebo další příjem</li>
+                <li><span className="font-medium">Typ:</span> Vyberte „Příjem“ pro dar, sbírku nebo další příjem</li>
                 <li><span className="font-medium">Kategorie:</span> Zvolte typ příjmu (dar, sbírka, státní subvence...)</li>
                 <li><span className="font-medium">Částka:</span> Uveďte přesnou výši příjmu v korunách</li>
               </>
             ) : (
               <>
-                <li><span className="font-medium">Typ:</span> Vyberte "Výdaj" pro úhradu nákladů farnosti</li>
+                <li><span className="font-medium">Typ:</span> Vyberte „Výdaj“ pro úhradu nákladů farnosti</li>
                 <li><span className="font-medium">Kategorie:</span> Zvolte typ výdaje (údržba, energie, plat...)</li>
                 <li><span className="font-medium">Částka:</span> Uveďte přesnou výši výdaje v korunách</li>
               </>

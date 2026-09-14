@@ -32,10 +32,6 @@ export default function StatistikyDashboard() {
     pohreby: 0
   });
 
-  useEffect(() => {
-    loadStatistics();
-  }, [rok, mesic]);
-
   const loadStatistics = async () => {
     setLoading(true);
     
@@ -70,6 +66,10 @@ export default function StatistikyDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadStatistics();
+  }, [rok, mesic]);
 
   const generateReport = async () => {
     try {

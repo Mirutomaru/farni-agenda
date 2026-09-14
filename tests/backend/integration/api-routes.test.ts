@@ -80,7 +80,6 @@ describe('API Route Handler - Encryption Logic', () => {
     test('Edge Case: Velmi dlouhý řetězec (10KB)', async () => {
       const longValue = 'a'.repeat(10240);
       
-      // @ts-ignore - encryptValue vrací result s encrypted stringem
       const result = encryptValue(longValue, MOCK_ENCRYPTION_KEY) as unknown as Record<string, unknown>;
       
       expect(result).toHaveProperty('encrypted');
@@ -90,7 +89,6 @@ describe('API Route Handler - Encryption Logic', () => {
     test('Edge Case: Speciální znaky a unicode', async () => {
       const specialValue = 'Jan Novák@email.cz - Příjmení s diakritikou';
       
-      // @ts-ignore
       const result = encryptValue(specialValue, MOCK_ENCRYPTION_KEY) as unknown as Record<string, unknown>;
       
       expect(result).toHaveProperty('encrypted');
@@ -189,7 +187,6 @@ describe('API Route Handler - Encryption Logic', () => {
     test('Šifrování velmi dlouhého řetězce (100KB)', async () => {
       const plaintext = 'a'.repeat(102400);
       
-      // @ts-ignore
       const result = encryptValue(plaintext, MOCK_ENCRYPTION_KEY) as unknown as Record<string, unknown>;
       
       expect(result).toHaveProperty('encrypted');

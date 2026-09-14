@@ -53,7 +53,7 @@ function formatReportHtml(stats: FarnostStatRow[], rok: number, mesic: number): 
   html += '<table border="1" cellpadding="8" style="border-collapse: collapse;">';
   html += '<tr><th>Farnost</th><th>Členů</th><th>Křty</th><th>Birování</th><th>Svatby</th><th>Pohřby</th></tr>';
 
-  let totals: ReportTotals = { celkemClenu: 0, kresty: 0, birovani: 0, svatby: 0, pohreby: 0 };
+  const totals: ReportTotals = { celkemClenu: 0, kresty: 0, birovani: 0, svatby: 0, pohreby: 0 };
 
   for (const stat of stats || []) {
     html += `<tr><td>${stat.farnost_nazev}</td><td>${stat.celkem_clenu || 0}</td>
@@ -144,7 +144,7 @@ async function generateMonthlyReport(rok: number, mesic: number): Promise<{
     }
 
     // Výpočet celkových součtů
-    let totals: ReportTotals = { celkemClenu: 0, kresty: 0, birovani: 0, svatby: 0, pohreby: 0 };
+    const totals: ReportTotals = { celkemClenu: 0, kresty: 0, birovani: 0, svatby: 0, pohreby: 0 };
     for (const stat of stats || []) {
       totals.celkemClenu += stat.celkem_clenu || 0;
       totals.kresty += stat.kresty || 0;

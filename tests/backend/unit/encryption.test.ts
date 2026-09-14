@@ -7,7 +7,7 @@ jest.unmock('crypto');
 process.env.ENCRYPTION_KEY = 'test-encryption-key-for-testing-only-not-production';
 
 // require() místo import — běží až po nastavení ENCRYPTION_KEY (import by se hoistnul)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { encrypt, decrypt, isEncrypted } = require('@/lib/security/encryption') as typeof import('@/lib/security/encryption');
 
 describe('encrypt', () => {
@@ -65,7 +65,7 @@ describe('decrypt — chybové větve', () => {
     jest.isolateModules(() => {
       jest.unmock('crypto');
       process.env.ENCRYPTION_KEY = 'another-encryption-key-for-testing-only-32ch';
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mod = require('@/lib/security/encryption') as typeof import('@/lib/security/encryption');
       expect(() => mod.decrypt(encrypted)).toThrow(/Dešifrování selhalo/);
     });
@@ -75,7 +75,7 @@ describe('decrypt — chybové větve', () => {
     jest.isolateModules(() => {
       jest.unmock('crypto');
       delete process.env.ENCRYPTION_KEY;
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mod = require('@/lib/security/encryption') as typeof import('@/lib/security/encryption');
       expect(() => mod.encrypt('x')).toThrow(/klíč není nakonfigurován/i);
     });

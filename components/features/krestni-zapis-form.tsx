@@ -31,10 +31,6 @@ export default function KrestniZapisForm({ osobaId }: { osobaId?: string }) {
     priprava_zapis: ''
   });
 
-  useEffect(() => {
-    loadOsoby();
-  }, []);
-
   const loadOsoby = async () => {
     try {
       // FIX: clenstvi_status místo status (sjednocení se schema v2/v3)
@@ -50,6 +46,10 @@ export default function KrestniZapisForm({ osobaId }: { osobaId?: string }) {
       console.error('Chyba při načítání osob:', err);
     }
   };
+
+  useEffect(() => {
+    loadOsoby();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

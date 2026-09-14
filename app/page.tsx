@@ -37,7 +37,7 @@ export default async function DashboardPage() {
         {statsError && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800 mb-4">
             ⚠️ Funkce get_monthly_statistics není v databázi. Aplikujte schema.sql na Supabase:
-            <code className="block mt-1 bg-white px-2 py-1 rounded text-xs">SELECT * FROM information_schema.tables WHERE table_name = 'osoby';</code>
+            <code className="block mt-1 bg-white px-2 py-1 rounded text-xs">SELECT * FROM information_schema.tables WHERE table_name = &apos;osoby&apos;;</code>
           </div>
         )}
 

@@ -24,7 +24,7 @@ export default async function MajetekPage({ searchParams }: { searchParams?: Pro
   
   const supabase = createClient();
 
-  let query = supabase.from('majetek').select('*').order('nazev');
+  const query = supabase.from('majetek').select('*').order('nazev');
   
   if (kategorieFilter) {
     query.eq('kategorie', kategorieFilter);
@@ -38,10 +38,6 @@ export default async function MajetekPage({ searchParams }: { searchParams?: Pro
 
   const totalMembers = financeStats?.reduce((sum: number, s: any) => sum + (s.celkem_clenu || 0), 0) || 0;
   const activeMembers = financeStats?.reduce((sum: number, s: any) => sum + (s.aktivni_clenu || 0), 0) || 0;
-
-  // Celková hodnota majetku
-  let totalValue = 0;
-  let activeCount = 0;
 
   const { data: items }: any = await query;
 

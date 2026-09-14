@@ -86,10 +86,6 @@ export default function OsobaForm({ editId }: { editId?: string }) {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   // Načtení farností pro select
-  useEffect(() => {
-    loadFarnosti();
-  }, []);
-
   const loadFarnosti = async () => {
     try {
       const { data, error } = await supabase
@@ -103,6 +99,10 @@ export default function OsobaForm({ editId }: { editId?: string }) {
       console.error('Chyba při načítání farností:', err);
     }
   };
+
+  useEffect(() => {
+    loadFarnosti();
+  }, []);
 
   // Našeptávač adres přes serverovou proxy (chrání SMARTFORM_API_KEY)
   const searchSmartform = async (query: string) => {

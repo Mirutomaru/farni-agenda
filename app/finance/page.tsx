@@ -71,7 +71,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
   }
 
   // Statistika podle kategorií pro graf
-  let kategorieStats: Record<string, { příjmy: number; výdaje: number }> = {};
+  const kategorieStats: Record<string, { příjmy: number; výdaje: number }> = {};
   
   if (financeItems && financeItems.length > 0) {
     for (const item of financeItems) {

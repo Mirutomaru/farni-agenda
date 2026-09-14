@@ -13,7 +13,7 @@ export default async function OsobyPage({ searchParams }: { searchParams?: Promi
   
   const supabase = createClient();
 
-  let osobyQuery = supabase.from('osoby').select('*', { count: 'exact' }).order('prijmeni');
+  const osobyQuery = supabase.from('osoby').select('*', { count: 'exact' }).order('prijmeni');
   
   // Aplikace filtrů
   if (query.trim()) {
@@ -106,7 +106,7 @@ export default async function OsobyPage({ searchParams }: { searchParams?: Promi
         <div className="card bg-red-50 border border-red-200 text-center">
           <p className="text-red-700 font-medium mb-2">⚠️ Chyba při načítání dat</p>
           <p className="text-sm text-red-600">{error.message}</p>
-          <p className="text-xs text-gray-500 mt-2">Ujistěte se, že je schema.sql aplikováno na Supabase a tabulka 'osoby' existuje.</p>
+          <p className="text-xs text-gray-500 mt-2">Ujistěte se, že je schema.sql aplikováno na Supabase a tabulka &apos;osoby&apos; existuje.</p>
         </div>
       )}
 
