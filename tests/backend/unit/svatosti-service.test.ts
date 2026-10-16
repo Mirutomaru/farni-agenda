@@ -9,6 +9,8 @@ import {
   filterByTyp,
   certificateTypeFor,
   monthRange,
+  buildSvedkoveRows,
+  groupSvedkoveBySvatba,
 } from '@/lib/services/svatosti-service';
 
 describe('svatosti-service', () => {
@@ -194,6 +196,59 @@ describe('svatosti-service', () => {
 
       expect(range.from).toBe('2026-02-01');
       expect(range.toExclusive).toBe('2026-03-01');
+    });
+  });
+
+  describe('buildSvedkoveRows', () => {
+    test('vytvoří řádky pro tabulku svatba_svedkove', () => {
+      const rows = buildSvedkoveRows('sv1', ['os5', 'os6']);
+      expect(rows).toEqual([
+        { svatba_id: 'sv1', svedek_id: 'os5' },
+        { svatba_id: 'sv1', svedek_id: 'os6' },
+      ]);
+    });
+
+    test('odstraní duplicity (UNIQUE(svatba_id, svedek_id))', () => {
+      const rows = buildSvedkoveRows('sv1', ['os5', 'os5', 'os6']);
+      expect(rows).toHaveLength(2);
+    });
+
+    test('vynechá prázdné/null/undefined hodnoty (nezvolený svědek)', () => {
+      const rows = buildSvedkoveRows('sv1', ['', null, undefined, 'os5']);
+      expect(rows).toEqual([{ svatba_id: 'sv1', svedek_id: 'os5' }]);
+    });
+
+    test('žádní svědkové → prázdné pole (bez insertu)', () => {
+      expect(buildSvedkoveRows('sv1', [])).toEqual([]);
+      expect(buildSvedkoveRows('sv1', [null, ''])).toEqual([]);
+    });
+  });
+
+  describe('groupSvedkoveBySvatba', () => {
+    test('seskupí svědky podle svatby pro zobrazení v UI', () => {
+      const map = groupSvedkoveBySvatba([
+        { svatba_id: 'sv1', svedek_id: 'os5' },
+        { svatba_id: 'sv1', svedek_id: 'os6' },
+        { svatba_id: 'sv2', svedek_id: 'os7' },
+      ]);
+
+      expect(map.get('sv1')).toEqual(['os5', 'os6']);
+      expect(map.get('sv2')).toEqual(['os7']);
+    });
+
+    test('ignoruje řádky bez svatba_id nebo svedek_id (defenzivně)', () => {
+      const map = groupSvedkoveBySvatba([
+        { svatba_id: null, svedek_id: 'os5' },
+        { svatba_id: 'sv1', svedek_id: undefined },
+        { svatba_id: 'sv1', svedek_id: 'os6' },
+      ]);
+
+      expect(map.get('sv1')).toEqual(['os6']);
+    });
+
+    test('null/undefined vstup → prázdná mapa', () => {
+      expect(groupSvedkoveBySvatba(null).size).toBe(0);
+      expect(groupSvedkoveBySvatba(undefined).size).toBe(0);
     });
   });
 });

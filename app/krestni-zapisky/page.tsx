@@ -4,7 +4,8 @@
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import KrestniZapisForm from '@/components/features/krestni-zapis-form';
-import { mergeSvatosti, filterByTyp, certificateTypeFor } from '@/lib/services/svatosti-service';
+import SvatbaForm from '@/components/features/svatba-form';
+import { mergeSvatosti, filterByTyp, certificateTypeFor, groupSvedkoveBySvatba } from '@/lib/services/svatosti-service';
 
 const ZAPIS_TYPES = [
   { value: 'krest', label: '⛪ Křest', color: 'bg-blue-100 text-blue-800 border-blue-200' },
@@ -19,15 +20,20 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
   const supabase = createClient();
 
   // Schéma nemá společnou tabulku ani sloupec "typ" — načteme všechny tři tabulky paralelně
-  const [krestyRes, birovaniRes, svatbyRes, osobyRes, farnostiRes] = await Promise.all([
+  const [krestyRes, birovaniRes, svatbyRes, osobyRes, farnostiRes, svedkoveRes] = await Promise.all([
     supabase.from('krestni_zapis').select('*'),
     supabase.from('birovani_zapis').select('*'),
     supabase.from('svatby').select('*'),
     supabase.from('osoby').select('id, krestni_jmeno, prijmeni, farnost_id'),
     supabase.from('farnosti').select('id, nazev'),
+    // Svědkové svatby (relace svatba_svedkove) — pro zobrazení u svatebních zápisů
+    supabase.from('svatba_svedkove').select('svatba_id, svedek_id'),
   ]);
 
   const error = krestyRes.error || birovaniRes.error || svatbyRes.error;
+
+  // Svědkové seskupení podle svatby (idempotentní lookup pro tabulku)
+  const svedkoveMap = groupSvedkoveBySvatba(svedkoveRes.data);
 
   // Lookup jména osob a názvů farností pro zobrazení v tabulce
   const osobaNames = new Map<string, string>();
@@ -169,6 +175,12 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
                       <span className="font-medium text-gray-900">{displayName(zapis.osobaId)}</span>
                       {zapis.druhOsobaId ? (
                         <div className="text-xs text-gray-500">+ {displayName(zapis.druhOsobaId)}</div>
+                      ) : null}
+                      {/* Svědkové svatby — z relace svatba_svedkove */}
+                      {zapis.typ === 'svadba' && svedkoveMap.get(zapis.id) ? (
+                        <div className="text-xs text-purple-600 mt-1">
+                          🕊️ Svědkové: {svedkoveMap.get(zapis.id)!.map((id) => displayName(id)).join(', ')}
+                        </div>
                       ) : null}
                     </div>
                   </td>
@@ -333,8 +345,11 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
         </Link>
       </div>
 
-      {/* KrestniZapisForm component */}
-      <KrestniZapisForm />
+      {/* Formuláře pro nové zápisy — křest a svatba (svědkové se zapisují do svatba_svedkove) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <KrestniZapisForm />
+        <SvatbaForm />
+      </div>
     </div>
   );
 }

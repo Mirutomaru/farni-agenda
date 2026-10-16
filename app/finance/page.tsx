@@ -125,7 +125,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
 
       {/* Filtry */}
       <div className="card p-4">
-        <form action="/finance" method="get" className="flex flex-col md:flex-row gap-3 items-end">
+        <form key={`${typFilter}|${mesicParam}`} action="/finance" method="get" className="flex flex-col md:flex-row gap-3 items-end">
           
           {/* Typ filtr */}
           <div>

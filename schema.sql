@@ -211,7 +211,7 @@ CREATE TABLE IF NOT EXISTS svatba_svedkove (
     CONSTRAINT uq_svatba_svedek UNIQUE(svatba_id, svedek_id)
 );
 
-CREATE INDEX idx_svatebni_svedkove ON svatba_svedkove(svateba_id);
+CREATE INDEX idx_svatba_svedkove ON svatba_svedkove(svatba_id);
 
 CREATE TABLE pohreby (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -325,6 +325,8 @@ ALTER TABLE krestni_zapis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE birovani_zapis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE svatby ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pohreby ENABLE ROW LEVEL SECURITY;
+-- Svědkové svatby — přístup dle stejného pravidla jako svatba (superadmin/biskup nebo farář jednoho z manželů)
+ALTER TABLE svatba_svedkove ENABLE ROW LEVEL SECURITY;
 
 -- Superadmin - vidí všechno
 CREATE POLICY superadmin_farnosti_policy ON farnosti FOR ALL
@@ -383,6 +385,18 @@ CREATE POLICY svatby_admin_policy ON svatby FOR ALL
   USING (
     EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
     OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = auth.uid() AND uf.aktivni WHERE o.id = COALESCE(muz_id, zena_id))
+  );
+
+-- Svědkové svatby — stejná pravidla jako u svatby (přes relaci svatba_id)
+CREATE POLICY svatba_svedkove_admin_policy ON svatba_svedkove FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    OR EXISTS (
+      SELECT 1 FROM svatby s
+      JOIN osoby o ON o.id = COALESCE(s.muz_id, s.zena_id)
+      JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = auth.uid() AND uf.aktivni
+      WHERE s.id = svatba_svedkove.svatba_id
+    )
   );
 
 CREATE POLICY pohreby_admin_policy ON pohreby FOR ALL

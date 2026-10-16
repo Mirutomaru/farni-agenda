@@ -41,6 +41,11 @@ logs/
 # Database dumps
 *.sql
 !schema.sql
+!migrations/*.sql
 
 # Test coverage
 coverage/
+
+# Playwright artefakty (E2E)
+test-results/
+playwright-report/

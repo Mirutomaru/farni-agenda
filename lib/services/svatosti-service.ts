@@ -81,6 +81,32 @@ export function filterByTyp(records: NormalizedZapis[], typ?: string): Normalize
   return records.filter((r) => r.typ === typ);
 }
 
+// === SVATBA — SVĚDKOVÉ (tabulka svatba_svedkove) ===
+
+/**
+ * Vytvoří řádky pro tabulku `svatba_svedkove` ze seznamu ID svědků.
+ * Odstraní duplicity a prázdné hodnoty (UNIQUE(svatba_id, svedek_id)).
+ */
+export function buildSvedkoveRows(svatbaId: string, svedekIds: Array<string | null | undefined>): { svatba_id: string; svedek_id: string }[] {
+  const unique = [...new Set((svedekIds || []).filter((id): id is string => !!id))];
+  return unique.map((svedek_id) => ({ svatba_id: svatbaId, svedek_id }));
+}
+
+/**
+ * Přepočte řádky `svatba_svedkove` na mapu svatba_id → seznam ID svědků
+ * pro zobrazení v UI (list/detail).
+ */
+export function groupSvedkoveBySvatba(rows: Array<{ svatba_id?: string | null; svedek_id?: string | null }> | null | undefined): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const row of rows || []) {
+    if (!row.svatba_id || !row.svedek_id) continue;
+    const list = map.get(row.svatba_id) ?? [];
+    if (!list.includes(row.svedek_id)) list.push(row.svedek_id);
+    map.set(row.svatba_id, list);
+  }
+  return map;
+}
+
 // === CERTIFIKÁTY ===
 
 /**

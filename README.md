@@ -41,18 +41,21 @@ Vytvořit bezpečný, low-cost informační systém pro Starokatolickou církev 
 
 ```
 farni-agenda/
-├── schema.sql              # SQL schéma a RLS politiky
-├── components/
-│   └── OsobaForm.tsx       # Formulář s Smartform integrací
-├── functions/
-│   ├── birthday-watcher/   # Kontrola narozenin
+├── schema.sql              # SQL schéma a RLS politiky (verze 3.0 — kanonické)
+├── migrations/             # Inkrementální migrace (001–004) pro existující DB
+├── app/                    # Next.js App Router (stránky + API routes)
+│   ├── osoby/              # CRUD osob (detail, edit, křestní záznamy)
+│   ├── finance/            # Finance s měsíčním filtrem
+│   └── statistiky/         # Statistiky s grafy
+├── components/             # Sdílené UI komponenty
+├── lib/                    # Doménová logika (services, utils) + Supabase klienti
+├── supabase/functions/     # Edge funkce (Deno) — jediný kanonický adresář
+│   ├── birthday-watcher/   # Kontrola narozenin (cron 8:00 UTC)
+│   ├── monthly-statistics/ # Měsíční statistiky + e-mail report
 │   ├── audit-logger/       # Audit logování
-│   └── weekly-backup/      # Týdenní zálohy
-├── api/
-│   └── encrypt.ts          # Šifrování dat
-├── lib/
-│   └── supabase/
-│       └── client.ts       # Supabase klient
+│   ├── certificates-generator/ # PDF křestní/birovací listiny
+│   └── weekly-backup/      # Týdenní zálohy do GCS
+├── tests/                  # Jest unit testy (216+) + Playwright E2E
 └── .env.local              # Lokální proměnné
 ```
 
@@ -72,17 +75,27 @@ farni-agenda/
 - **Farnost Admin**: Vidí pouze data své farnosti
 - **Autentizace**: Výhradně Google OAuth 2.0 přes Supabase Auth
 
-### Audit logy
-Každá změna v databázi vytváří záznam v tabulce `logs`:
-- Kdo provedl akci (user_id)
-- Jakou akci (CREATE/UPDATE/DELETE)
-- Na jaké tabulce a objektu
-- Data před a po změně
+### Audit logy (dvě tabulky s odlišným účelem)
+
+V databázi vedle sebe existují **dvě** logovací tabulky — mají odlišný účel a nesloučí se:
+
+| Tabulka | Účel | Kdo píše | Obsah |
+|---------|------|----------|-------|
+| `audit_log` | **Změny dat** (append-only) | Doménové servisy (`osoba-service`, `finance-service`, `majetek-service`) + DB trigger | `action` (INSERT/UPDATE/DELETE), `table_name`, `record_id`, `data_before`/`data_after` (JSONB delta), IP, user-agent |
+| `logs` | **Operační události systému** | Edge funkce (`weekly-backup`, `certificates-generator`, `monthly-statistics`) | `akce` (CREATE/UPDATE/DELETE/LOGIN/EXPORT/BIRTHDAY_CHECK/BACKUP), `tabulka`, `objekt_id`, data před/po, IP, user-agent |
+
+**Pravidlo:**
+- Změnil se **záznam v databázi** → `audit_log` (append-only, UPDATE/DELETE zakázány RLS)
+- Spustil se **systémový proces** (backup, export, generování certifikátu) → `logs`
+
+> ⚠️ Historicky README uvádělo, že „každá změna vytváří záznam v tabulce `logs`" — to nebylo přesné. Doménové servisy píší do `audit_log`, edge funkce do `logs`.
 
 ## 🚀 Edge Functions
 
-### 1. Birthday Watcher (`/functions/birthday-watcher`)
-**Spouštění**: Cron každodenně v 8:00 UTC
+Všechny funkce žijí **pouze** v `supabase/functions/` (deploy: `supabase functions deploy <nazev>`). Starý adresář `functions/` byl sjednocen do něj — nevytvářejte tam nové kopie.
+
+### 1. Birthday Watcher (`supabase/functions/birthday-watcher`)
+**Spouštění**: Cron každodenně v 8:00 UTC (nebo ručně přes `pg_notify('realtime_changes', ...)` / curl)
 
 **Funkce**:
 - Kontroluje osoby s kulatými narozeninami (násobek 5 let)
@@ -90,21 +103,15 @@ Každá změna v databázi vytváří záznam v tabulce `logs`:
 - Odešle e-mail Superadminům přes SendGrid/Resend
 - Vytvoří audit záznam
 
-**API Response**:
-```json
-{
-  "message": "Birthday Watcher úspěšně dokončen",
-  "count": 3,
-  "people": [
-    {"jmeno": "Jan Novák", "vek": 50},
-    {"jmeno": "Marie Svobodová", "vek": 60}
-  ],
-  "emailsSent": 2,
-  "emailsFailed": 0
-}
-```
+### 2. Monthly Statistics (`supabase/functions/monthly-statistics`)
+**Spouštění**: Cron na začátku měsíce (nebo ručně)
 
-### 2. Audit Logger (`/functions/audit-logger`)
+**Funkce**:
+- Volá RPC `get_monthly_statistics(rok, mesic)` — statistiky členů, křest, birování, finance
+- Odešle e-mail report Superadminům přes Resend/SendGrid
+- Chybějící API klíč nebo HTTP chyba = throw (žádné tiché selhání)
+
+### 3. Audit Logger (`supabase/functions/audit-logger`)
 **Spouštění**: Voláno z frontendu při každé změně
 
 **Funkce**:
@@ -112,7 +119,14 @@ Každá změna v databázi vytváří záznam v tabulce `logs`:
 - Odesílá notifikaci Superadminům
 - Ukládá IP adresu a user agent
 
-### 3. Weekly Backup (`/functions/weekly-backup`)
+### 4. Certificates Generator (`supabase/functions/certificates-generator`)
+**Spouštění**: Voláno při uložení křestního záznamu / birování
+
+**Funkce**:
+- Generuje PDF křestní/birovací listinu (jsPDF)
+- Ukládá do GCS a vrací odkaz
+
+### 5. Weekly Backup (`supabase/functions/weekly-backup`)
 **Spouštění**: Cron každou neděli v 2:00 UTC
 
 **Funkce**:
@@ -175,15 +189,25 @@ Peněžní deník.
 | variabilni_symbol | TEXT | VS pro platbu |
 
 ### `logs`
-Audit logy všech změn.
+Operační události systému (píší edge funkce — backup, certifikáty, statistiky). Pro změny dat viz `audit_log`.
 
 | Pole | Typ | Popis |
 |------|-----|-------|
 | user_id | UUID | Kdo provedl akci |
-| akce | TEXT | CREATE/UPDATE/DELETE |
+| akce | TEXT | CREATE/UPDATE/DELETE/LOGIN/EXPORT/BIRTHDAY_CHECK/BACKUP |
 | tabulka | TEXT | Název tabulky |
-| data_před | JSONB | Data před změnou |
-| data_po | JSONB | Data po změně |
+| objekt_id | UUID | Dotčený záznam |
+| data_před / data_po | JSONB | Stav před a po akci |
+
+### `audit_log`
+Append-only audit změn dat (píší doménové servisy + DB trigger). UPDATE/DELETE zakázány RLS.
+
+| Pole | Typ | Popis |
+|------|-----|-------|
+| user_id | VARCHAR | Kdo změnu provedl (default `system`) |
+| action | TEXT | INSERT/UPDATE/DELETE |
+| table_name / record_id | — | Dotčená tabulka a záznam |
+| data_before / data_after | JSONB | Delta stavu před/po změně |
 
 ## 🔧 Konfigurace
 
@@ -218,19 +242,39 @@ GCS_BUCKET_NAME=farni-agenda-backups
 
 ### 1. Nastavení Supabase
 
+**Kanónické schéma je `schema.sql` (verze 3.0)** — kompletní, konsolidované (tabulky + RLS + audit trigger + RPC funkce). Staré soubory `schema-v2.sql` a `schema-v3-improvements.sql` byly odstraněny; jejich obsah je v `schema.sql`.
+
 ```bash
 # Přihlášení do Supabase CLI
 supabase login
 
 # Vytvoření nového projektu
 supabase init
+```
 
-# Aplikování schématu
+**Nová databáze** — stačí aplikovat kanonické schéma:
+
+```bash
 psql -h db.your-project.supabase.co -U postgres -c "CREATE EXTENSION pgcrypto;"
 psql -h db.your-project.supabase.co -U postgres -f schema.sql
 ```
 
+**Existující databáze** — aplikovat inkrementální migrace v pořadí (jsou idempotentní):
+
+```bash
+for f in migrations/001_append_only_audit.sql \
+          migrations/002_birthday_watcher_migration.sql \
+          migrations/003_supabase_rpc_functions.sql \
+          migrations/004_svatba_svedkove.sql; do
+  psql -h db.your-project.supabase.co -U postgres -f "$f"
+done
+```
+
+> ⚠️ Migrace nikdy neupravujte zpětně — nová změna schématu = nový soubor `migrations/00N_*.sql` + zrcadlení do `schema.sql`.
+
 ### 2. Nastavení Edge Functions
+
+Všechny funkce žijí v `supabase/functions/`:
 
 ```bash
 # Přihlášení
@@ -238,7 +282,9 @@ supabase login
 
 # Deploy funkcí
 supabase functions deploy birthday-watcher
+supabase functions deploy monthly-statistics
 supabase functions deploy audit-logger
+supabase functions deploy certificates-generator
 supabase functions deploy weekly-backup
 ```
 
@@ -269,13 +315,15 @@ vercel --prod
 
 ## 🎨 Frontend komponenty
 
-### OsobaForm.tsx
-Komplexní formulář pro přidání osoby s:
-- **Smartform.cz integrace** - našeptávač adres z RÚIAN
-- **Šifrování na clientu** - před odesláním do Supabase
-- **Validace dat** - povinná pole, formáty
-- **Církevní role** - multi-select checkboxy
-- **Data svátostí** - křest, biřmování, svatba
+### `osoba-form/` (adresář s subkomponentami)
+Komplexní formulář pro přidání osoby, rozdělený na logické sekce:
+- **IdentitySection** — základní údaje (jméno, příjmení, datum narození, pohlaví)
+- **ContactSection** — citlivé údaje + **Smartform.cz integrace** (našeptávač adres z RÚIAN)
+- **RolesSection** — církevní role (checkboxy)
+- **SacramentsSection** — data svátostí (křest, biřmování)
+- **index.tsx** — orchestrátor (jediný zdroj pravdy formulářových dat + odeslání na backend)
+
+Šifrování citlivých polí probíhá **server-side**; validace přes Zod. Import path zůstává `@/components/features/osoba-form`.
 
 ### RLS Policy příklad
 
