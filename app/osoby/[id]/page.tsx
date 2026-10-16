@@ -6,13 +6,16 @@ import Link from 'next/link';
 import OsobaForm from '@/components/features/osoba-form';
 import KrestniZapisForm from '@/components/features/krestni-zapis-form';
 
-export default async function OsobaDetailPage({ params }: { params: { id: string } }) {
+export default async function OsobaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = createClient();
   
+  // Next 16: params je Promise — unwrap přes await (bez něj je params.id undefined)
+  const { id } = await params;
+
   const { data: osoba, error } = await supabase
     .from('osoby')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
 
   if (error || !osoba) {
@@ -36,7 +39,7 @@ export default async function OsobaDetailPage({ params }: { params: { id: string
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Link href={`/osoby/${params.id}/edit`} className="btn-primary inline-flex items-center gap-2">
+          <Link href={`/osoby/${id}/edit`} className="btn-primary inline-flex items-center gap-2">
             ✏️ Upravit
           </Link>
           <Link href="/osoby" className="btn-secondary inline-flex items-center gap-2">
@@ -130,8 +133,8 @@ export default async function OsobaDetailPage({ params }: { params: { id: string
 
       {/* Forms */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <KrestniZapisForm osobaId={params.id} />
-        <OsobaForm editId={params.id} />
+        <KrestniZapisForm osobaId={id} />
+        <OsobaForm editId={id} />
       </div>
     </div>
   );

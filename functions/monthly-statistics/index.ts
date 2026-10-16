@@ -118,7 +118,7 @@ serve(async (req) => {
 
 async function sendEmail(to: string, subject: string, html: string) {
   if (RESEND_API_KEY) {
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -131,8 +131,12 @@ async function sendEmail(to: string, subject: string, html: string) {
         html
       })
     });
+    // Oprava: HTTP chyba API (401/5xx) už není tichá — volající dostane throw
+    if (!res.ok) {
+      throw new Error(`Resend API vrátilo HTTP ${res.status}`);
+    }
   } else if (SENDGRID_API_KEY) {
-    await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${SENDGRID_API_KEY}`,
@@ -145,7 +149,14 @@ async function sendEmail(to: string, subject: string, html: string) {
         html_content: html
       })
     });
+    if (!res.ok) {
+      throw new Error(`SendGrid API vrátilo HTTP ${res.status}`);
+    }
   } else {
-    console.warn('Není nastaveno žádné e-mailové API');
+    // Oprava P0: starý kód jen console.warn → volající si myslel, že e-mail byl odeslán.
+    // Nyní throw (volající v handleru chytá a loguje per-admin).
+    throw new Error('Není nastaveno žádné e-mailové API (chybí RESEND_API_KEY i SENDGRID_API_KEY)');
   }
 }
+
+export { sendEmail };

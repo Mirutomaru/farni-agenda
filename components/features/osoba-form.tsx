@@ -103,9 +103,55 @@ export default function OsobaForm({ editId }: { editId?: string }) {
     }
   };
 
+  // Načtení existující osoby pro edit režim (editId)
+  const loadOsoba = async () => {
+    if (!editId) return;
+    try {
+      const { data, error } = await supabase
+        .from('osoby')
+        .select('*')
+        .eq('id', editId)
+        .single();
+
+      if (error || !data) throw new Error(error?.message || 'Osoba nenalezena');
+
+      // Citlivá pole jsou v DB zašifrovaná a dešifrovací funkce zatím neexistuje,
+      // proto se prefillují jen veřejná pole. Prázdné citlivé pole = bez změny
+      // (updateOsobaService ignoruje prázdné hodnoty).
+      setFormData({
+        krestni_jmeno: data.krestni_jmeno || '',
+        prijmeni: data.prijmeni || '',
+        datum_narozeni: data.datum_narozeni ? String(data.datum_narozeni).slice(0, 10) : '',
+        pohlavi: typeof data.pohlavi === 'boolean' ? data.pohlavi : null,
+        ico: '',
+        obcan_prukaz: '',
+        adresa_trvaly_bydlist: '',
+        email: '',
+        telefon: '',
+        role_cirkinni: Array.isArray(data.role_cirkinni) ? data.role_cirkinni : [],
+        krest_datum: data.krest_datum ? String(data.krest_datum).slice(0, 10) : '',
+        krest_misto: data.krest_misto || '',
+        biřmování_datum: data.birovani_datum ? String(data.birovani_datum).slice(0, 10) : '',
+        biřmování_misto: data.birovani_misto || ''
+      });
+
+      if (data.farnost_id) {
+        setVybranaFarnost(String(data.farnost_id));
+      }
+    } catch (err) {
+      log.error('Chyba při načítání osoby pro edit', {}, err instanceof Error ? err : null);
+      alert(`Osoba se nepodařila načíst: ${err instanceof Error ? err.message : 'neznámá chyba'}`);
+    }
+  };
+
   useEffect(() => {
     loadFarnosti();
   }, []);
+
+  useEffect(() => {
+    loadOsoba();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
 
   // Našeptávač adres přes serverovou proxy (chrání SMARTFORM_API_KEY)
   const searchSmartform = async (query: string) => {
@@ -200,13 +246,13 @@ export default function OsobaForm({ editId }: { editId?: string }) {
       };
 
       const response = await fetch('/api/osoby', {
-        method: 'POST',
+        method: editId ? 'PUT' : 'POST',
         headers: { 
           'Content-Type': 'application/json',
           // Authorization header pro audit log (pokud je user přihlášen)
           ...(typeof window !== 'undefined' ? {} : {})
         },
-        body: JSON.stringify(osobaData),
+        body: JSON.stringify(editId ? { id: editId, ...osobaData } : osobaData),
       });
 
       if (!response.ok) {
@@ -216,7 +262,9 @@ export default function OsobaForm({ editId }: { editId?: string }) {
 
       const result = await response.json();
       
-      alert(`Osoba ${formData.krestni_jmeno} ${formData.prijmeni} byla úspěšně přidána!`);
+      alert(editId
+        ? `Osoba ${formData.krestni_jmeno} ${formData.prijmeni} byla úspěšně aktualizována!`
+        : `Osoba ${formData.krestni_jmeno} ${formData.prijmeni} byla úspěšně přidána!`);
       
       // Reset formuláře
       setFormData({
@@ -263,7 +311,7 @@ export default function OsobaForm({ editId }: { editId?: string }) {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Přidat novou osobu</h1>
+      <h1 className="text-2xl font-bold mb-6">{editId ? 'Upravit osobu' : 'Přidat novou osobu'}</h1>
       
       <form noValidate onSubmit={handleSubmit} className="space-y-6">
         {/* Farnost */}
@@ -522,7 +570,7 @@ export default function OsobaForm({ editId }: { editId?: string }) {
             loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {loading ? 'Ukládání...' : 'Přidat osobu'}
+          {loading ? 'Ukládání...' : (editId ? 'Uložit změny' : 'Přidat osobu')}
         </button>
       </form>
     </div>

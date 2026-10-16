@@ -3,6 +3,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { getMonthRange } from '@/lib/utils/month-range';
 
 const KATEGORIE_FINANCE: Record<string, string> = {
   dar: '🎁 Dar',
@@ -29,17 +30,11 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
   
   const supabase = createClient();
 
-  let dateRangeFilter: string | null = null;
-  if (mesicParam) {
-    const [rok, mesice] = mesicParam.split('-');
-    const firstDay = `${rok}-${mesice}-01`;
-    // Calculate last day of month
-    const nextMonth = parseInt(mesice) === 12 ? `${parseInt(rok) + 1}-01` : `${rok}-${String(parseInt(mesice) + 1).padStart(2, '0')}`;
-    const lastDay = new Date(nextMonth.replace(/-/g, '/') + '-01').getDate() - 1;
-    dateRangeFilter = `datum_příjmu.gte.${firstDay},datum_příjmu.lte.${rok}-${mesice}-${String(lastDay).padStart(2, '0')}`;
-  }
+  // Měsíční filtr: výpočet rozsahu přes testovatelnou utilitu (starý inline kód
+  // vracel lastDay = 0 a výsledek se navíc nikdy neaplikoval na query)
+  const monthRange = mesicParam ? getMonthRange(mesicParam) : null;
 
-  let query = supabase
+  let query: any = supabase
     .from('finance')
     .select('*')
     .order('datum_příjmu', { ascending: false });
@@ -48,12 +43,9 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
     query = query.eq('typ', typFilter);
   }
 
-  if (dateRangeFilter) {
-    const [gteCol, gteVal] = dateRangeFilter.split(',').map(s => {
-      const [col, val] = s.split('.');
-      return `${col}.gt.${val}`;
-    });
-    // Use Supabase RPC or rpc for custom filter
+  // Oprava P0: filtr měsíce se nyní skutečně aplikuje na query (gte/lte)
+  if (monthRange) {
+    query = query.gte('datum_příjmu', monthRange.firstDay).lte('datum_příjmu', monthRange.lastDay);
   }
 
   const financeItemsRaw = await query;

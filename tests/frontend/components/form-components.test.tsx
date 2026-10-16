@@ -34,6 +34,24 @@ beforeEach(() => {
 // ==================== SUPABASE MOCK (chainable query builder) ====================
 const farnostiData = [{ id: '1', nazev: 'Praha', zkratka: 'SPR' }];
 
+// Edit režim: záznam osoby vracený .eq('id', ...).single() — testy ho mohou přepsat
+let osobySingleResult = {
+  data: {
+    id: 'edit-1',
+    krestni_jmeno: 'Petr',
+    prijmeni: 'Svoboda',
+    datum_narozeni: '1985-06-15T00:00:00.000Z',
+    pohlavi: true,
+    farnost_id: '1',
+    role_cirkinni: ['farnik'],
+    krest_datum: '1985-07-01T00:00:00.000Z',
+    krest_misto: 'Praha',
+    birovani_datum: null,
+    birovani_misto: null,
+  },
+  error: null,
+};
+
 function createQueryBuilder(table) {
   if (table === 'farnosti') {
     return {
@@ -55,6 +73,10 @@ function createQueryBuilder(table) {
             return {
               order(col = 'id') {
                 return Promise.resolve({ data: [], error: null });
+              },
+              // Edit režim: načtení existující osoby podle ID
+              single() {
+                return Promise.resolve(osobySingleResult);
               },
             };
           },
@@ -570,6 +592,149 @@ describe('OsobaForm Component', () => {
 
       expect(Date.now() - startTime).toBeLessThan(5000);
     });
+  });
+});
+
+// ==================== OSOBA FORM - EDIT REŽIM (editId) ====================
+describe('OsobaForm Edit Mode', () => {
+
+  async function renderEditForm(editId = 'edit-1') {
+    const { default: OsobaForm } = await import('@/features/osoba-form');
+    return <OsobaForm editId={editId} />;
+  }
+
+  beforeEach(() => {
+    // Defaultní mock osoby (v případě, že předchozí test přepsal osobySingleResult)
+    osobySingleResult = {
+      data: {
+        id: 'edit-1',
+        krestni_jmeno: 'Petr',
+        prijmeni: 'Svoboda',
+        datum_narozeni: '1985-06-15T00:00:00.000Z',
+        pohlavi: true,
+        farnost_id: '1',
+        role_cirkinni: ['farnik'],
+        krest_datum: '1985-07-01T00:00:00.000Z',
+        krest_misto: 'Praha',
+        birovani_datum: null,
+        birovani_misto: null,
+      },
+      error: null,
+    };
+  });
+
+  test('Edit: Vykreslení edit nadpisu a tlačítka Uložit změny', async () => {
+    const component = await renderEditForm();
+    render(component);
+
+    expect(screen.getByText(/Upravit osobu/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Přidat novou osobu/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Uložit změny/i })).toBeInTheDocument();
+  });
+
+  test('Edit: Prefill formuláře existujícími daty osoby', async () => {
+    const component = await renderEditForm();
+    render(component);
+
+    // Počkat na načtení osoby (async useEffect)
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Petr')).toBeInTheDocument();
+    }, { timeout: 5000 });
+
+    expect(screen.getByDisplayValue('Svoboda')).toBeInTheDocument();
+    // Datum narození se prefilluje jako YYYY-MM-DD (bez časové části)
+    expect(screen.getByDisplayValue('1985-06-15')).toBeInTheDocument();
+    // Křestní data se načtou z osoby
+    expect(screen.getByDisplayValue('1985-07-01')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Praha')).toBeInTheDocument();
+  });
+
+  test('Edit: Farnost je předvyplněná podle osoby', async () => {
+    const component = await renderEditForm();
+    render(component);
+
+    await waitFor(() => {
+      const select = screen.getByLabelText(/Farnost \*/i) as HTMLSelectElement;
+      expect(select.value).toBe('1');
+    }, { timeout: 5000 });
+  });
+
+  test('Edit: Role osoby jsou předzaškrtnuté', async () => {
+    const component = await renderEditForm();
+    render(component);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Farník/i)).toBeChecked();
+    }, { timeout: 5000 });
+  });
+
+  test('Edit: Submit volá PUT s id osoby (ne POST)', async () => {
+    const component = await renderEditForm();
+    render(component);
+
+    // Počkat na prefill, pak odeslat bez změn
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Petr')).toBeInTheDocument();
+    }, { timeout: 5000 });
+
+    fireEvent.click(screen.getByRole('button', { name: /Uložit změny/i }));
+
+    await waitFor(() => {
+      const fetchCalls = (window.fetch as jest.Mock).mock.calls;
+      const osobyCall = fetchCalls.find(c => String(c[0]).includes('/api/osoby'));
+      expect(osobyCall).toBeDefined();
+      // Klíčové: edit režim musí poslat PUT, ne POST (POST by vytvořil duplikát)
+      expect(osobyCall![1].method).toBe('PUT');
+      const body = JSON.parse(osobyCall![1].body);
+      expect(body.id).toBe('edit-1');
+    }, { timeout: 5000 });
+
+    await waitFor(() => {
+      expectAlertContains('byla úspěšně aktualizována');
+    }, { timeout: 5000 });
+  });
+
+  test('Edit: Nový režim (bez editId) stále volá POST', async () => {
+    const { default: OsobaForm } = await import('@/features/osoba-form');
+    render(<OsobaForm />);
+
+    // Vyplnit povinná pole a odeslat
+    await waitFor(() => {
+      const options = screen.getByLabelText(/Farnost \*/i).querySelectorAll('option');
+      expect(options.length).toBeGreaterThan(1);
+    }, { timeout: 3000 });
+
+    fireEvent.change(screen.getByLabelText(/Farnost \*/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/Křestní jméno \*/i), { target: { value: 'Nový' } });
+    fireEvent.change(screen.getByLabelText(/Příjmení \*/i), { target: { value: 'Člověk' } });
+    fireEvent.change(screen.getByLabelText(/Datum narození \*/i), { target: { value: '1990-01-01' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Přidat osobu/i }));
+
+    await waitFor(() => {
+      const fetchCalls = (window.fetch as jest.Mock).mock.calls;
+      const osobyCall = fetchCalls.find(c => String(c[0]).includes('/api/osoby'));
+      expect(osobyCall).toBeDefined();
+      expect(osobyCall![1].method).toBe('POST');
+      const body = JSON.parse(osobyCall![1].body);
+      // POST nesmí obsahovat id (jinak by to byl update)
+      expect(body.id).toBeUndefined();
+    }, { timeout: 5000 });
+  });
+
+  test('Edit: Chyba při načítání osoby → alert, formulář zůstává prázdný', async () => {
+    osobySingleResult = { data: null, error: { message: 'Osoba nenalezena' } };
+
+    const component = await renderEditForm();
+    render(component);
+
+    await waitFor(() => {
+      expectAlertContains('nepodařila načíst');
+    }, { timeout: 5000 });
+
+    // Formulář zůstává prázdný (žádný prefill) — ověřím konkrétní pole jména
+    expect(screen.getByLabelText(/Křestní jméno \*/i)).toHaveValue('');
+    expect(screen.getByLabelText(/Příjmení \*/i)).toHaveValue('');
   });
 });
 
