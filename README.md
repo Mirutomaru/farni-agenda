@@ -37,12 +37,29 @@ Vytvořit bezpečný, low-cost informační systém pro Starokatolickou církev 
    Watcher   Logger   Backup
 ```
 
+## ✨ P2 Funkce (nové)
+
+### Full-text vyhledávání osob (`search_persons`)
+- RPC funkce `search_persons(query, limit)` — full-text přes `osoby_blind_index` (tsvector + GIN index)
+- Krátké dotazy (1–2 znaky) spadnou do ILIKE fallbacku
+- Stránka `/osoby` používá RPC; při chybě (migrace 005 neaplikována) automaticky padne na původní ILIKE dotaz
+
+### Výročí svatb a pohřbů (`check_anniversary_notifications`)
+- RPC funkce `check_anniversary_notifications(horizon_days)` — vrací nadcházející výročí svatb (5leté násobky) a smuteční výročí úmrtí (1. rok, pak každých 5 let)
+- Birthday-watcher volá s horizontem 3 dny a přidá je do e-mailu adminům
+
+### Export dat do CSV/PDF
+- API routes `/api/export-csv?typ=osoby|finance|krestni-zapisky` a `/api/export-pdf?typ=...`
+- CSV: BOM pro Excel + diakritiku, RFC 4180 escaping
+- PDF: jsPDF s embedded DejaVu Sans fontem (diakritika)
+- Tlačítka na stránkách `/osoby`, `/finance`, `/krestni-zapisky`
+
 ## 📁 Struktura projektu
 
 ```
 farni-agenda/
 ├── schema.sql              # SQL schéma a RLS politiky (verze 3.0 — kanonické)
-├── migrations/             # Inkrementální migrace (001–004) pro existující DB
+├── migrations/             # Inkrementální migrace (001–006) pro existující DB
 ├── app/                    # Next.js App Router (stránky + API routes)
 │   ├── osoby/              # CRUD osob (detail, edit, křestní záznamy)
 │   ├── finance/            # Finance s měsíčním filtrem
@@ -99,9 +116,10 @@ Všechny funkce žijí **pouze** v `supabase/functions/` (deploy: `supabase func
 
 **Funkce**:
 - Kontroluje osoby s kulatými narozeninami (násobek 5 let)
+- **P2**: Volá RPC `check_anniversary_notifications(3)` — upozorní na výročí svatb a smuteční výročí úmrtí v horizontu 3 dnů
 - Dešifruje emaily pro notifikaci
-- Odešle e-mail Superadminům přes SendGrid/Resend
-- Vytvoří audit záznam
+- Odešle e-mail Superadminům přes SendGrid/Resend (předmět se přizpůsobí obsahu: narozeniny / výročí / obojí)
+- Vytvoří audit záznam (včetně počtu výročí)
 
 ### 2. Monthly Statistics (`supabase/functions/monthly-statistics`)
 **Spouštění**: Cron na začátku měsíce (nebo ručně)
@@ -265,7 +283,9 @@ psql -h db.your-project.supabase.co -U postgres -f schema.sql
 for f in migrations/001_append_only_audit.sql \
           migrations/002_birthday_watcher_migration.sql \
           migrations/003_supabase_rpc_functions.sql \
-          migrations/004_svatba_svedkove.sql; do
+          migrations/004_svatba_svedkove.sql \
+          migrations/005_fulltext_search.sql \
+          migrations/006_anniversary_notifications.sql; do
   psql -h db.your-project.supabase.co -U postgres -f "$f"
 done
 ```

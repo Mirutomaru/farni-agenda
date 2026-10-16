@@ -1,5 +1,7 @@
-# Supabase CLI
-supabase/
+# Supabase CLI (lokální env) — ale edge funkce jsou součást kódu
+supabase/*
+!supabase/functions/
+!supabase/.env.example
 
 # Node modules
 node_modules/
@@ -42,6 +44,7 @@ logs/
 *.sql
 !schema.sql
 !migrations/*.sql
+!tests/backend/unit/sql-functions.test.sql
 
 # Test coverage
 coverage/

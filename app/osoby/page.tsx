@@ -13,24 +13,69 @@ export default async function OsobyPage({ searchParams }: { searchParams?: Promi
   
   const supabase = createClient();
 
-  const osobyQuery = supabase.from('osoby').select('*', { count: 'exact' }).order('prijmeni');
-  
-  // Aplikace filtrů
+  let osoby: any[] | null = null;
+  let count: number | null = null;
+  let error: { message: string } | null = null;
+
   if (query.trim()) {
-    const searchTerms = query.split(' ').filter(Boolean);
-    // Vyhledávání v krestni_jmeno a prijmeni (LIKE - funguje bez indexu na malé datové sady)
-    for (const term of searchTerms) {
-      osobyQuery.or(`krestni_jmeno.ilike.%${term}%,prijmeni.ilike.%${term}%`);
+    // P2: Full-text vyhledávání přes osoby_blind_index (RPC search_persons)
+    // — tsvector + GIN index, czech stemming. Krátké dotazy (<3 znaky) spadnou na ILIKE fallback v SQL funkci.
+    const { data: results, error: rpcError } = await supabase.rpc('search_persons', {
+      p_query: query.trim(),
+      p_limit: 100,
+    });
+
+    if (rpcError) {
+      // RPC chybí (migrace 005 neaplikována) → fallback na původní ILIKE dotaz
+      const searchTerms = query.split(' ').filter(Boolean);
+      const q = supabase.from('osoby').select('*', { count: 'exact' }).order('prijmeni');
+      for (const term of searchTerms) {
+        q.or(`krestni_jmeno.ilike.%${term}%,prijmeni.ilike.%${term}%`);
+      }
+      const res = await q.limit(100);
+      osoby = res.data;
+      count = res.count;
+      error = res.error ? { message: res.error.message } : null;
+    } else if (results && results.length > 0) {
+      const ids = results.map((r: any) => r.osoba_id);
+      // Načtení plných záznamů osob (RPC vrací jen ID + relevance)
+      const { data: full, error: fetchError } = await supabase
+        .from('osoby')
+        .select('*')
+        .in('id', ids);
+
+      if (fetchError) {
+        error = { message: fetchError.message };
+      } else {
+        // Zachování pořadí podle relevance z full-text vyhledávání
+        const orderMap = new Map<string, number>(
+          results.map((r: any, i: number) => [String(r.osoba_id), i] as [string, number]),
+        );
+        osoby = (full || []).sort(
+          (a: any, b: any) => (orderMap.get(String(a.id)) ?? 999) - (orderMap.get(String(b.id)) ?? 999),
+        );
+        count = osoby.length;
+      }
+    } else {
+      osoby = [];
+      count = 0;
     }
-  }
-
-  if (statusFilter !== 'all') {
-    // Filtr podle clenstvi_status nebo status (oba sloupce)
+  } else if (statusFilter !== 'all') {
+    // Filtr podle statusu bez hledání
     const filterValue = `eq.${statusFilter}`;
-    osobyQuery.or(`clenstvi_status.${filterValue},status.${filterValue}`);
+    const q = supabase.from('osoby').select('*', { count: 'exact' }).order('prijmeni');
+    q.or(`clenstvi_status.${filterValue},status.${filterValue}`);
+    const res = await q.limit(100);
+    osoby = res.data;
+    count = res.count;
+    error = res.error ? { message: res.error.message } : null;
+  } else {
+    // Bez filtrů — původní chování (prvních 100 osob)
+    const res = await supabase.from('osoby').select('*', { count: 'exact' }).order('prijmeni').limit(100);
+    osoby = res.data;
+    count = res.count;
+    error = res.error ? { message: res.error.message } : null;
   }
-
-  const { data: osoby, error, count } = await osobyQuery.limit(100);
 
   // Statistiky pro filtry
   const { data: statsData } = await supabase.from('osoby').select('clenstvi_status', { count: 'exact' });
@@ -46,10 +91,14 @@ export default async function OsobyPage({ searchParams }: { searchParams?: Promi
           </p>
         </div>
         
-        {/* Přidat osobu button */}
-        <Link href="/osoby/new" className="btn-primary whitespace-nowrap">
-          ➕ Přidat osobu
-        </Link>
+        {/* Přidat osobu + Export (P2) */}
+        <div className="flex gap-2">
+          <Link href="/api/export-csv?typ=osoby" className="btn-secondary whitespace-nowrap">📥 CSV</Link>
+          <Link href="/api/export-pdf?typ=osoby" className="btn-secondary whitespace-nowrap">📄 PDF</Link>
+          <Link href="/osoby/new" className="btn-primary whitespace-nowrap">
+            ➕ Přidat osobu
+          </Link>
+        </div>
       </div>
 
       {/* Vyhledávání a filtry */}
@@ -60,9 +109,10 @@ export default async function OsobyPage({ searchParams }: { searchParams?: Promi
             <input
               name="q"
               defaultValue={query}
-              placeholder="Hledat jméno nebo příjmení..."
+              placeholder="Hledat jméno nebo příjmení (full-text)..."
               className="form-input"
             />
+            <p className="text-xs text-gray-500 mt-1">Full-text vyhledávání přes index — zvládá i celá jména a diakritiku.</p>
           </div>
 
           {/* Filtr podle statusu */}

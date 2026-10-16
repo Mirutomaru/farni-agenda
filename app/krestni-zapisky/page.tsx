@@ -77,10 +77,14 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
           <p className="text-sm text-gray-600 mt-1">Správa křestních, birovacích a svatebních zápisů s generováním certifikátů</p>
         </div>
 
-        {/* Přidat zápis button */}
-        <Link href="/krestni-zapisky/new" className="btn-primary whitespace-nowrap">
-          ➕ Přidat zápis
-        </Link>
+        {/* Přidat zápis + Export (P2) */}
+        <div className="flex gap-2">
+          <Link href="/api/export-csv?typ=krestni-zapisky" className="btn-secondary whitespace-nowrap">📥 CSV</Link>
+          <Link href="/api/export-pdf?typ=krestni-zapisky" className="btn-secondary whitespace-nowrap">📄 PDF</Link>
+          <Link href="/krestni-zapisky/new" className="btn-primary whitespace-nowrap">
+            ➕ Přidat zápis
+          </Link>
+        </div>
       </div>
 
       {/* Statistiky */}
