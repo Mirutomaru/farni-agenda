@@ -491,6 +491,74 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- TEST 9: Migrace 009 — obal (select auth.uid()) v policies + ILIKE escaping
+-- ============================================================================
+
+\echo ''
+\echo 'TEST 9: migrace 009 (RLS výkon + ILIKE escaping)'
+\echo '----------------------------------------'
+
+DO $$
+DECLARE
+    test_farnost UUID := (SELECT id FROM farnosti WHERE zkratka = 'TF');
+    wildcard_osoba UUID;
+    policy_count INTEGER;
+BEGIN
+    -- Test 9.1: Policies používají obal (select auth.uid()) — konstantní poddotaz
+    RAISE NOTICE 'Test 9.1: RLS policies s obalem (select auth.uid())...';
+
+    SELECT COUNT(*) INTO policy_count
+    FROM pg_policies p
+    WHERE p.schemaname = 'public'
+      AND p.policydef ILIKE '%select auth.uid()%';
+
+    IF policy_count < 17 THEN
+        RAISE EXCEPTION '  ✗ Očekáván alespoň 17 policies s obalem (select auth.uid()), nalezeno %', policy_count;
+    END IF;
+    RAISE NOTICE '  ✓ % RLS policies používá cacheovaný obal (select auth.uid())', policy_count;
+
+    -- Žádná policy nesmí obsahovat holé '= auth.uid()' bez poddotazového obalu
+    SELECT COUNT(*) INTO policy_count
+    FROM pg_policies p
+    WHERE p.schemaname = 'public'
+      AND p.policydef ILIKE '%= auth.uid()%';
+
+    IF policy_count > 0 THEN
+        RAISE EXCEPTION '  ✗ % policies stále používá holé auth.uid() bez obalu', policy_count;
+    END IF;
+
+    -- Test 9.2: ILIKE escaping — dotaz '%' musí zachytit jen osoby s doslovným % v jméně
+    RAISE NOTICE 'Test 9.2: ILIKE escaping wildcards v search_persons...';
+
+    INSERT INTO osoby (farnost_id, krestni_jmeno, prijmeni, datum_narozeni, clenstvi_od, clenstvi_zdroj, status)
+    VALUES (test_farnost, 'Wildcard', 'Test%Osoba', '1985-06-15', CURRENT_DATE, 'krest', 'aktivni')
+    RETURNING id INTO wildcard_osoba;
+
+    -- Dotaz '%' by bez escaping zachytil VŠECHNY osoby (wildcard) — s escaping jen doslovné %
+    IF NOT EXISTS (SELECT * FROM search_persons('%', 100) WHERE osoba_id = wildcard_osoba) THEN
+        RAISE EXCEPTION '  ✗ Dotaz %% nezachytil osobu s doslovným %% v příjmení';
+    END IF;
+
+    -- Osoby BEZ % v jméně by dotaz '%' neměl zachytit (před fixem ano — únik dat)
+    IF EXISTS (SELECT * FROM search_persons('%', 100) WHERE osoba_id <> wildcard_osoba) THEN
+        RAISE EXCEPTION '  ✗ Dotaz %% zachytil i osoby bez %% v jméně (escaping nefunguje)';
+    END IF;
+
+    -- Test 9.3: Normální krátký dotaz dál funguje po přepisu funkce
+    RAISE NOTICE 'Test 9.3: Krátký dotaz po přepisu search_persons...';
+
+    IF NOT EXISTS (SELECT * FROM search_persons('Nov', 100)) THEN
+        RAISE EXCEPTION '  ✗ Krátký dotaz Nov nezachytil osobu Novák';
+    END IF;
+    RAISE NOTICE '  ✓ Krátké dotazy dál fungují (ILIKE fallback s escapingem)';
+
+    -- Cleanup
+    DELETE FROM osoby WHERE id = wildcard_osoba;
+
+    RAISE NOTICE '  ✓ Testy migrace 009 dokončeny';
+END $$;
+
+-- ============================================================================
 -- CLEANUP: SMYTÍ TESTOVACÍCH DAT
 -- ============================================================================
 

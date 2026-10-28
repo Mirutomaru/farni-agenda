@@ -26,11 +26,14 @@ export default async function OsobyPage({ searchParams }: { searchParams?: Promi
     });
 
     if (rpcError) {
-      // RPC chybí (migrace 005 neaplikována) → fallback na původní ILIKE dotaz
+      // RPC chybí (migrace 005 neaplikována) → fallback na původní ILIKE dotaz.
+      // Escapeuj % a _ (ILIKE wildcards), aby dotaz '%' nezachytil všechny osoby.
+      const escapeIlike = (s: string) => s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
       const searchTerms = query.split(' ').filter(Boolean);
       const q = supabase.from('osoby').select('*', { count: 'exact' }).order('prijmeni');
       for (const term of searchTerms) {
-        q.or(`krestni_jmeno.ilike.%${term}%,prijmeni.ilike.%${term}%`);
+        const esc = escapeIlike(term);
+        q.or(`krestni_jmeno.ilike.%${esc}%,prijmeni.ilike.%${esc}%`);
       }
       const res = await q.limit(100);
       osoby = res.data;

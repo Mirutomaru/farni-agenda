@@ -359,105 +359,105 @@ ALTER TABLE uzivatel_farnost ENABLE ROW LEVEL SECURITY;
 
 -- Superadmin - vidí všechno
 CREATE POLICY superadmin_farnosti_policy ON farnosti FOR ALL
-  USING (EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup')));
+  USING (EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup')));
 
 -- Farnost: admin/reditel vidí jen svou, superadmin všechno
 CREATE POLICY farnost_admin_policy ON farnosti FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = auth.uid() AND uf.farnost_id = id AND uf.aktivni)
-    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = (select auth.uid()) AND uf.farnost_id = id AND uf.aktivni)
+    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
   );
 
 -- Osoby: vidí jen osoby z farností, ke kterým má přístup
 CREATE POLICY osoby_admin_policy ON osoby FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = auth.uid() AND uf.farnost_id = osoby.farnost_id AND uf.aktivni)
-    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = (select auth.uid()) AND uf.farnost_id = osoby.farnost_id AND uf.aktivni)
+    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
   );
 
 -- Finance: jen správci farnosti a výše
 CREATE POLICY finance_admin_policy ON finance FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = auth.uid() AND uf.farnost_id = finance.farnost_id AND uf.aktivni)
-    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = (select auth.uid()) AND uf.farnost_id = finance.farnost_id AND uf.aktivni)
+    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
   );
 
 -- Audit logy: jen superadmin a správci příslušné farnosti
 CREATE POLICY logs_admin_policy ON logs FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
     OR farnost_id IS NULL
-    OR EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = auth.uid() AND uf.farnost_id = logs.farnost_id AND uf.aktivni)
+    OR EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = (select auth.uid()) AND uf.farnost_id = logs.farnost_id AND uf.aktivni)
   );
 
 -- Uzivatele: vlastní profil + superadmin/biskup vidí všechny profily (audit 007)
 CREATE POLICY uzivatele_select_policy ON uzivatele FOR SELECT
   USING (
-    id = auth.uid()
-    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    id = (select auth.uid())
+    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
   );
 
 CREATE POLICY uzivatele_insert_policy ON uzivatele FOR INSERT
-  WITH CHECK (id = auth.uid());
+  WITH CHECK (id = (select auth.uid()));
 
 CREATE POLICY uzivatele_update_policy ON uzivatele FOR UPDATE
-  USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+  USING (id = (select auth.uid())) WITH CHECK (id = (select auth.uid()));
 
 -- Uzivatel-farnost: vlastní členství + superadmin/biskup vidí vše (audit 007)
 CREATE POLICY uzivatel_farnost_select_policy ON uzivatel_farnost FOR SELECT
   USING (
-    user_id = auth.uid()
-    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    user_id = (select auth.uid())
+    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
   );
 
 CREATE POLICY uzivatel_farnost_insert_policy ON uzivatel_farnost FOR INSERT
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (user_id = (select auth.uid()));
 
 CREATE POLICY uzivatel_farnost_update_policy ON uzivatel_farnost FOR UPDATE
-  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+  USING (user_id = (select auth.uid())) WITH CHECK (user_id = (select auth.uid()));
 
 -- Majetek: stejná pravidla jako finance
 CREATE POLICY majetek_admin_policy ON majetek FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = auth.uid() AND uf.farnost_id = majetek.farnost_id AND uf.aktivni)
-    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = (select auth.uid()) AND uf.farnost_id = majetek.farnost_id AND uf.aktivni)
+    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
   );
 
 -- Sakramentalní záznamy: dědičnost přes farnost_id osoby
 CREATE POLICY krestni_zapis_admin_policy ON krestni_zapis FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
-    OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = auth.uid() AND uf.aktivni WHERE o.id = pokrteny_id)
+    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
+    OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = (select auth.uid()) AND uf.aktivni WHERE o.id = pokrteny_id)
   );
 
 CREATE POLICY birovani_zapis_admin_policy ON birovani_zapis FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
-    OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = auth.uid() AND uf.aktivni WHERE o.id = birovan_id)
+    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
+    OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = (select auth.uid()) AND uf.aktivni WHERE o.id = birovan_id)
   );
 
 CREATE POLICY svatby_admin_policy ON svatby FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
-    OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = auth.uid() AND uf.aktivni WHERE o.id = COALESCE(muz_id, zena_id))
+    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
+    OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = (select auth.uid()) AND uf.aktivni WHERE o.id = COALESCE(muz_id, zena_id))
   );
 
 -- Svědkové svatby — stejná pravidla jako u svatby (přes relaci svatba_id)
 CREATE POLICY svatba_svedkove_admin_policy ON svatba_svedkove FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
     OR EXISTS (
       SELECT 1 FROM svatby s
       JOIN osoby o ON o.id = COALESCE(s.muz_id, s.zena_id)
-      JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = auth.uid() AND uf.aktivni
+      JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = (select auth.uid()) AND uf.aktivni
       WHERE s.id = svatba_svedkove.svatba_id
     )
   );
 
 CREATE POLICY pohreby_admin_policy ON pohreby FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
-    OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = auth.uid() AND uf.aktivni WHERE o.id = zemrel_id)
+    EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = (select auth.uid()) AND u.role IN ('superadmin', 'biskup'))
+    OR EXISTS (SELECT 1 FROM osoby o JOIN uzivatel_farnost uf ON uf.farnost_id = o.farnost_id AND uf.user_id = (select auth.uid()) AND uf.aktivni WHERE o.id = zemrel_id)
   );
 
 -- ============================================================================
