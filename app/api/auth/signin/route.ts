@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const origin = process.env.NEXT_PUBLIC_SITE_URL || `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
   
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Google OAuth redirect — callback route je v /api/auth/callback
   const { data, error } = await supabase.auth.signInWithOAuth({

@@ -19,7 +19,7 @@ export type AuthResult =
  * - Platná session → { ok: true, user }
  */
 export async function requireUser(): Promise<AuthResult> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // getUser() ověří JWT na auth serveru (ne jen decode) — bezpečnější než getSession()
   const { data: { user }, error } = await supabase.auth.getUser();

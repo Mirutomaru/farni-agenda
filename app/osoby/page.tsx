@@ -1,7 +1,7 @@
 // FARNÍ AGENDA - SEZNAM OSOB S VYHLEDÁVÁNÍM A FILTRY
 // Stránka /osoby — přehledný seznam s vyhledáváním, filtrováním a rychlými akcemi
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import OsobaForm from '@/components/features/osoba-form';
 
@@ -11,7 +11,7 @@ export default async function OsobyPage({ searchParams }: { searchParams?: Promi
   const query = params.q || '';
   const statusFilter = params.status || 'all';
   
-  const supabase = createClient();
+  const supabase = await createClient();
 
   let osoby: any[] | null = null;
   let count: number | null = null;

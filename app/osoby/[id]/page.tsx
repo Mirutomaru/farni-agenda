@@ -1,13 +1,13 @@
 // FARNÍ AGENDA - DETAIL OSOBY (/osoby/[id])
 // Stránka pro zobrazení kompletních informací o jedné osobě
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import OsobaForm from '@/components/features/osoba-form';
 import KrestniZapisForm from '@/components/features/krestni-zapis-form';
 
 export default async function OsobaDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Next 16: params je Promise — unwrap přes await (bez něj je params.id undefined)
   const { id } = await params;

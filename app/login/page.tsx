@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 export default async function LoginPage() {
   // Pokud je uživatel už přihlášený, přesměruj na dashboard
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   
   if (user) {

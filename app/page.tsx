@@ -1,11 +1,15 @@
 // FARNÍ AGENDA - DASHBOARD / PŘEHLED
 // Hlavní přehledová stránka se statistikami a rychlými odkazy
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 
+// Dashboard čte session + data → musí být dynamický (audit 007: statická cache
+// prázdného stavu by se servírovala všem uživatelům)
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Získání aktuálního uživatele
   const { data: { user } } = await supabase.auth.getUser();

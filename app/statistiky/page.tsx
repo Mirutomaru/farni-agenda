@@ -1,7 +1,7 @@
 // FARNÍ AGENDA - STATISTIKY DASHBOARD
 // Stránka /statistiky — přehled křtů, birování a svateb s CSS-based grafickým zobrazením
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { monthRange } from '@/lib/services/svatosti-service';
 
@@ -9,7 +9,7 @@ import { monthRange } from '@/lib/services/svatosti-service';
 export const dynamic = 'force-dynamic';
 
 export default async function StatistikyPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Statistika členství + svátosti — vše načítáme paralelně (oprava: dříve 12 sériových query)
   const currentYear = new Date().getFullYear();

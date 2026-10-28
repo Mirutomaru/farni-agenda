@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     return new Response(JSON.stringify({ error: 'No OAuth code provided' }), { status: 400 });
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Exchange code for session
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);

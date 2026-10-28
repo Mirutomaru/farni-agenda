@@ -139,7 +139,7 @@ function fmtDate(value: unknown): string {
 }
 
 async function fetchExportData(type: ExportType, log: Logger): Promise<ExportResult> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const dateStr = new Date().toISOString().slice(0, 10);
 
   if (type === 'osoby') {

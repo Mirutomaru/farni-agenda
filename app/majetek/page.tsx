@@ -1,7 +1,7 @@
 // FARNÍ AGENDA - MAJETEK / SPRÁVA MAJETKU
 // Stránka /majetek — přehled farního majetku s kategoriemi a inventářem
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 
 const KATEGORIE_LABELS: Record<string, string> = {
@@ -22,7 +22,7 @@ export default async function MajetekPage({ searchParams }: { searchParams?: Pro
   // Next.js 15+: searchParams je Promise — bez await se filtr nikdy nečetl a stránka zůstala statická
   const kategorieFilter = ((await searchParams) || {}).kategorie || '';
   
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const query = supabase.from('majetek').select('*').order('nazev');
   

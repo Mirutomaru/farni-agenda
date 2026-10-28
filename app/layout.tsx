@@ -2,7 +2,7 @@
 // Globální rozvržení s navigací, Supabase provider a šablonou
 
 import './globals.css';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 
 export const metadata = {
@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Check auth state server-side for navigation
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
   const navItems = [

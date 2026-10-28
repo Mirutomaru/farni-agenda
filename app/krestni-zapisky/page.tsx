@@ -1,7 +1,7 @@
 // FARNÍ AGENDA - KŘESTNÍ ZÁPISY (/krestni-zapisky)
 // Stránka pro správu křestních, birovacích a svatebních zápisů
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import KrestniZapisForm from '@/components/features/krestni-zapis-form';
 import SvatbaForm from '@/components/features/svatba-form';
@@ -17,7 +17,7 @@ export default async function KrestniZapiskyPage({ searchParams }: { searchParam
   // Next.js 15+: searchParams je Promise — bez await se filtr nikdy nečetl a stránka zůstala statická
   const typeFilter = (await searchParams)?.typ || '';
   
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Schéma nemá společnou tabulku ani sloupec "typ" — načteme všechny tři tabulky paralelně
   const [krestyRes, birovaniRes, svatbyRes, osobyRes, farnostiRes, svedkoveRes] = await Promise.all([

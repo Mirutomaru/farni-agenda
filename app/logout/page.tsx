@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 export default async function LogoutPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Defenzivně: i kdyby signOut selhal (např. placeholder env),
   // cookie se smaže a uživatel skončí na loginu

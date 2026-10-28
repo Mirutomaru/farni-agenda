@@ -97,7 +97,7 @@ export async function saveMajetekService(request: NextRequest): Promise<NextResp
     }
     const data = mapped.data!;
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: inserted, error } = await supabase
       .from('majetek')
       .insert([data])

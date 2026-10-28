@@ -1,7 +1,7 @@
 // FARNÍ AGENDA - FINANCE / PŘÍJMY A VÝDAJE
 // Stránka /finance — přehled financí farnosti s kategoriemi a dokumenty
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { getMonthRange } from '@/lib/utils/month-range';
 
@@ -28,7 +28,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
   const typFilter = params.typ || '';
   const mesicParam = params.mesic || '';
   
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Měsíční filtr: výpočet rozsahu přes testovatelnou utilitu (starý inline kód
   // vracel lastDay = 0 a výsledek se navíc nikdy neaplikoval na query)

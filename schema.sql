@@ -327,6 +327,11 @@ ALTER TABLE svatby ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pohreby ENABLE ROW LEVEL SECURITY;
 -- Svědkové svatby — přístup dle stejného pravidla jako svatba (superadmin/biskup nebo farář jednoho z manželů)
 ALTER TABLE svatba_svedkove ENABLE ROW LEVEL SECURITY;
+-- Logy: policy logs_admin_policy níže bez tohoto řádku byla mrtvé písmo (audit 007)
+ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
+-- Profily uživatelů + multi-tenancy relace — bez RLS čitelné i pro anon (audit 007)
+ALTER TABLE uzivatele ENABLE ROW LEVEL SECURITY;
+ALTER TABLE uzivatel_farnost ENABLE ROW LEVEL SECURITY;
 
 -- Superadmin - vidí všechno
 CREATE POLICY superadmin_farnosti_policy ON farnosti FOR ALL
@@ -360,6 +365,32 @@ CREATE POLICY logs_admin_policy ON logs FOR ALL
     OR farnost_id IS NULL
     OR EXISTS (SELECT 1 FROM uzivatel_farnost uf WHERE uf.user_id = auth.uid() AND uf.farnost_id = logs.farnost_id AND uf.aktivni)
   );
+
+-- Uzivatele: vlastní profil + superadmin/biskup vidí všechny profily (audit 007)
+CREATE POLICY uzivatele_select_policy ON uzivatele FOR SELECT
+  USING (
+    id = auth.uid()
+    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+  );
+
+CREATE POLICY uzivatele_insert_policy ON uzivatele FOR INSERT
+  WITH CHECK (id = auth.uid());
+
+CREATE POLICY uzivatele_update_policy ON uzivatele FOR UPDATE
+  USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+
+-- Uzivatel-farnost: vlastní členství + superadmin/biskup vidí vše (audit 007)
+CREATE POLICY uzivatel_farnost_select_policy ON uzivatel_farnost FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR EXISTS (SELECT 1 FROM uzivatele u WHERE u.id = auth.uid() AND u.role IN ('superadmin', 'biskup'))
+  );
+
+CREATE POLICY uzivatel_farnost_insert_policy ON uzivatel_farnost FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY uzivatel_farnost_update_policy ON uzivatel_farnost FOR UPDATE
+  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
 -- Majetek: stejná pravidla jako finance
 CREATE POLICY majetek_admin_policy ON majetek FOR ALL
