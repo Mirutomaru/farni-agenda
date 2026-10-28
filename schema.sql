@@ -253,6 +253,30 @@ CREATE INDEX idx_uzivatele_role ON uzivatele(role);
 CREATE INDEX idx_uzivatele_farnost ON uzivatele(PRIMARY_farnost_id);
 CREATE INDEX idx_uzivatele_email ON uzivatele(email);
 
+-- Nový Google OAuth uživatel automaticky dostane profil (migrace 008).
+-- Bez řádku v uzivatele ho RLS nevidí → prázdná aplikace po přihlášení.
+CREATE OR REPLACE FUNCTION handle_new_user() RETURNS trigger AS $$
+DECLARE
+    v_email TEXT;
+BEGIN
+    v_email := coalesce(new.email, new.raw_user_meta_data->>'email');
+    IF v_email IS NULL THEN
+        RETURN new; -- bez e-mailu profil nevytvoříme (NOT NULL constraint)
+    END IF;
+
+    INSERT INTO uzivatele (id, jmeno, prijmeni, email, role)
+    VALUES (new.id, new.raw_user_meta_data->>'first_name', new.raw_user_meta_data->>'last_name', v_email, 'redaktor_webu')
+    ON CONFLICT (id) DO NOTHING;
+
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
 -- ============================================================================
 -- 5. MULTI-TENANCY: Uzivatel-Farnost relace (schema-v3 vylepšení)
 -- ============================================================================
@@ -276,7 +300,7 @@ CREATE INDEX idx_uzivatel_farnost_farnost ON uzivatel_farnost(farnost_id);
 
 CREATE TABLE IF NOT EXISTS osoby_blind_index (
     osoba_id UUID PRIMARY KEY REFERENCES osoby(id) ON DELETE CASCADE,
-    email_hash TEXT UNIQUE NOT NULL,
+    email_hash TEXT, -- UNIQUE NOT NULL → běžný text (migrace 008): staré řádky bez hashu, app ho zatím nepoužívá
     phone_hash TEXT,
     ico_hash TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -499,6 +523,17 @@ RETURNS TABLE (
     pohreby INTEGER
 ) AS $$
 BEGIN
+    -- Auth guard (migrace 008): DEFINER obchází RLS volajícího → explicitní check.
+    -- Povoleno: service_role (edge funkce), přihlášený uživatel s aktivním profilem,
+    -- postgres/supabase_admin (migrace a ruční testy).
+    IF NOT (
+        coalesce(auth.role(), '') = 'service_role'
+        OR EXISTS (SELECT 1 FROM uzivatele WHERE id = auth.uid() AND aktivni)
+        OR current_user IN ('postgres', 'supabase_admin')
+    ) THEN
+        RAISE EXCEPTION 'Neautorizovany pristup k RPC get_monthly_statistics' USING ERRCODE = '42501';
+    END IF;
+
     RETURN QUERY
     SELECT 
         f.id,
@@ -532,6 +567,15 @@ RETURNS TABLE (
     farnost_id UUID
 ) AS $$
 BEGIN
+    -- Auth guard (migrace 008): viz get_monthly_statistics
+    IF NOT (
+        coalesce(auth.role(), '') = 'service_role'
+        OR EXISTS (SELECT 1 FROM uzivatele WHERE id = auth.uid() AND aktivni)
+        OR current_user IN ('postgres', 'supabase_admin')
+    ) THEN
+        RAISE EXCEPTION 'Neautorizovany pristup k RPC get_birthday_people' USING ERRCODE = '42501';
+    END IF;
+
     RETURN QUERY
     SELECT 
         o.id,
@@ -546,3 +590,14 @@ BEGIN
       AND clenstvi_status IN ('aktivni');
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- REVOKE/GRANT EXECUTE (migrace 008): nejménější oprávnění pro RPC funkce.
+-- Postgres defaultně dává EXECUTE roli PUBLIC (= i anon). Po REVOKE mají
+-- přístup jen authenticated (aplikace) a service_role (edge funkce).
+-- ============================================================================
+REVOKE EXECUTE ON FUNCTION get_monthly_statistics(integer, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_monthly_statistics(integer, integer) TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION get_birthday_people(integer, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_birthday_people(integer, integer) TO authenticated, service_role;

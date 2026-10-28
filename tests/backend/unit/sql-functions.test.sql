@@ -416,6 +416,81 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- TEST 8: Migrace 008 — blind index fix, handle_new_user, auth guardy RPC
+-- ============================================================================
+
+\echo ''
+\echo 'TEST 8: migrace 008 (blind index + user trigger + RPC guards)'
+\echo '----------------------------------------'
+
+DO $$
+DECLARE
+    test_farnost UUID := (SELECT id FROM farnosti WHERE zkratka = 'TF');
+    nova_osoba UUID;
+    auth_user UUID;
+BEGIN
+    -- Test 8.1: Nová osoba → trigger vytvoří blind index řádek s vektorem
+    -- (před migrací 008 spadl NOT NULL violation na email_hash)
+    RAISE NOTICE 'Test 8.1: Trigger sync_person_search_index u nové osoby...';
+
+    INSERT INTO osoby (farnost_id, krestni_jmeno, prijmeni, datum_narozeni, clenstvi_od, clenstvi_zdroj, status, verejny_email)
+    VALUES (test_farnost, 'Test', 'Blindindexová', '1990-01-01', CURRENT_DATE, 'krest', 'aktivni', 'blind@test.cz')
+    RETURNING id INTO nova_osoba;
+
+    IF NOT EXISTS (SELECT 1 FROM osoby_blind_index WHERE osoba_id = nova_osoba AND search_vector IS NOT NULL) THEN
+        RAISE EXCEPTION '  ✗ Blind index řádek s vektorem nebyl vytvořen';
+    END IF;
+    RAISE NOTICE '  ✓ Nová osoba má blind index řádek s plným textovým vektorem';
+
+    -- Test 8.2: Backfill — existující osoby mají search_vector (DO UPDATE, ne DO NOTHING)
+    RAISE NOTICE 'Test 8.2: Backfill existujících osob...';
+
+    IF EXISTS (SELECT 1 FROM osoby o WHERE NOT EXISTS (SELECT 1 FROM osoby_blind_index b WHERE b.osoba_id = o.id AND b.search_vector IS NOT NULL)) THEN
+        RAISE EXCEPTION '  ✗ Některé osoby nemají search_vector po backfillu';
+    END IF;
+    RAISE NOTICE '  ✓ Všechny osoby mají naplněný search_vector';
+
+    -- Test 8.3: handle_new_user — nový auth.user dostane profil v uzivatele
+    RAISE NOTICE 'Test 8.3: Trigger handle_new_user na auth.users...';
+
+    INSERT INTO auth.users (instance_id, id, aud, role, email)
+    VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', 'novy.user@test.cz')
+    RETURNING id INTO auth_user;
+
+    IF NOT EXISTS (SELECT 1 FROM uzivatele WHERE id = auth_user AND email = 'novy.user@test.cz' AND role = 'redaktor_webu') THEN
+        RAISE EXCEPTION '  ✗ Nový uživatel nedostal profil v uzivatele';
+    END IF;
+    RAISE NOTICE '  ✓ Nový Google OAuth uživatel automaticky dostal profil (role redaktor_webu)';
+
+    -- Test 8.4: Auth guard — RPC funkce funguje pro postgres (migrace/testy)
+    RAISE NOTICE 'Test 8.4: Auth guard v get_monthly_statistics...';
+
+    IF NOT EXISTS (SELECT * FROM get_monthly_statistics(EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, EXTRACT(MONTH FROM CURRENT_DATE)::INTEGER)) THEN
+        RAISE EXCEPTION '  ✗ get_monthly_statistics nevrátila žádná data pro postgres';
+    END IF;
+    RAISE NOTICE '  ✓ RPC funkce funguje pro postgres (guard nepropadá)';
+
+    -- Test 8.5: REVOKE od PUBLIC — anon už nemá EXECUTE na RPC funkcích
+    RAISE NOTICE 'Test 8.5: REVOKE EXECUTE od PUBLIC...';
+
+    IF has_function_privilege('anon', 'get_monthly_statistics(integer, integer)', 'EXECUTE') THEN
+        RAISE EXCEPTION '  ✗ Anon má stále EXECUTE na get_monthly_statistics (REVOKE neplatí)';
+    END IF;
+    IF NOT has_function_privilege('authenticated', 'get_monthly_statistics(integer, integer)', 'EXECUTE') THEN
+        RAISE EXCEPTION '  ✗ Authenticated nemá EXECUTE na get_monthly_statistics (GRANT chybí)';
+    END IF;
+    RAISE NOTICE '  ✓ REVOKE/GRANT EXECUTE aplikováno (anon bez přístupu, authenticated s přístupem)';
+
+    -- Cleanup testovacích dat z tohoto testu
+    DELETE FROM uzivatele WHERE id = auth_user;
+    DELETE FROM auth.users WHERE id = auth_user;
+    DELETE FROM osoby_blind_index WHERE osoba_id = nova_osoba;
+    DELETE FROM osoby WHERE id = nova_osoba;
+
+    RAISE NOTICE '  ✓ Testy migrace 008 dokončeny';
+END $$;
+
+-- ============================================================================
 -- CLEANUP: SMYTÍ TESTOVACÍCH DAT
 -- ============================================================================
 

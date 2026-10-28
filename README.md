@@ -59,7 +59,7 @@ Vytvořit bezpečný, low-cost informační systém pro Starokatolickou církev 
 ```
 farni-agenda/
 ├── schema.sql              # SQL schéma a RLS politiky (verze 3.0 — kanonické)
-├── migrations/             # Inkrementální migrace (001–006) pro existující DB
+├── migrations/             # Inkrementální migrace (001–008) pro existující DB
 ├── app/                    # Next.js App Router (stránky + API routes)
 │   ├── osoby/              # CRUD osob (detail, edit, křestní záznamy)
 │   ├── finance/            # Finance s měsíčním filtrem
@@ -285,7 +285,9 @@ for f in migrations/001_append_only_audit.sql \
           migrations/003_supabase_rpc_functions.sql \
           migrations/004_svatba_svedkove.sql \
           migrations/005_fulltext_search.sql \
-          migrations/006_anniversary_notifications.sql; do
+          migrations/006_anniversary_notifications.sql \
+          migrations/007_rls_gaps.sql \
+          migrations/008_rpc_security.sql; do
   psql -h db.your-project.supabase.co -U postgres -f "$f"
 done
 ```
